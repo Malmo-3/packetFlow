@@ -1,9 +1,8 @@
-    import { Router } from "express";
+import { Router } from "express";
+import { getTestMessage } from "../controllers/test.controller";
 
 const testRoute = Router();
 
-testRoute.get("/test", (req, res) => {
-  res.json({ message: "Backend is working" });
-});
+testRoute.get("/", getTestMessage);
 
 export default testRoute;

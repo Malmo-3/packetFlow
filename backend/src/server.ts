@@ -1,17 +1,20 @@
 import dotenv from "dotenv";
 import app from "./app";
 import connectDB from "./config/db";
-import testRoute from "./routes/test.route";
 
 dotenv.config();
 
-const PORT = 3001;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 
-connectDB();
+const startServer = async (): Promise<void> => {
+  await connectDB();
 
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+};
 
-app.use(testRoute);
-
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+startServer().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
 });
