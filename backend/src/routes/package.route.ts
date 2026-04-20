@@ -1,3 +1,5 @@
+//* Defines the endpoints for package operation..
+
 import { Router } from "express";
 import {
   createPackage,
@@ -5,7 +7,7 @@ import {
   getPackageById,
   updatePackageById,
   deletePackageById,
-} from "../controllers/package.controller";
+} from "../controllers/package.controller"; 
 
 const packageRoute = Router();
 

@@ -1,4 +1,6 @@
-import { Router } from "express";
+//* combine all routes .. 
+
+import { Router } from "express"; 
 import testRoute from "./test.route";
 import packageRoute from "./package.route";
 

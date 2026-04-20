@@ -1,5 +1,7 @@
+//* Contains the logic for creating and fetching packages.
+
 import { Request, Response } from "express";
-import Package from "../models/package.model";
+import Package from "../models/package.model";  
 import mongoose from "mongoose";
 
 export const createPackage = async (

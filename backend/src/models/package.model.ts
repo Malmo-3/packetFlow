@@ -1,4 +1,6 @@
-import { Schema, model } from "mongoose";
+//* Defines what a package looks like ..
+
+import { Schema, model } from "mongoose"; 
 
 export interface IPackage {
   trackingNumber: string;
