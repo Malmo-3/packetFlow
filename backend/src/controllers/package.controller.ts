@@ -4,6 +4,41 @@ import { Request, Response } from "express";
 import Package from "../models/package.model";  
 import mongoose from "mongoose";
 
+const handlePackageWriteError = (
+  res: Response,
+  error: unknown,
+  fallbackMessage: string,
+): void => {
+  if (error instanceof mongoose.Error.ValidationError) {
+    res.status(400).json({
+      success: false,
+      message: fallbackMessage,
+      error,
+    });
+    return;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === 11000
+  ) {
+    res.status(409).json({
+      success: false,
+      message: "trackingNumber already exists",
+      error,
+    });
+    return;
+  }
+
+  res.status(500).json({
+    success: false,
+    message: fallbackMessage,
+    error,
+  });
+};
+
 export const createPackage = async (
   req: Request,
   res: Response,
@@ -17,11 +52,7 @@ export const createPackage = async (
       data: newPackage,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to create package",
-      error,
-    });
+    handlePackageWriteError(res, error, "Failed to create package");
   }
 };
 
@@ -128,11 +159,7 @@ export const updatePackageById = async (
       data: updatedPackage,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to update package",
-      error,
-    });
+    handlePackageWriteError(res, error, "Failed to update package");
   }
 };
 
@@ -151,7 +178,7 @@ export const deletePackageById = async (
     if (!mongoose.Types.ObjectId.isValid(id)) {
       res.status(400).json({
         success: false,
-        messsage: "Invalid package ID",
+        message: "Invalid package ID",
       });
       return;
     }
