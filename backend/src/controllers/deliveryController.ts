@@ -155,7 +155,7 @@ export const getDeliveryById = async (
   }
 };
 
-// PUT /deliveries/:id -> update one or more fields of a delivery
+// PATCH /deliveries/:id -> update one or more fields of a delivery
 export const updateDelivery = async (
   req: Request<{ id: string }, {}, Partial<CreateDeliveryBody>>,
   res: Response
@@ -233,7 +233,7 @@ export const deleteDelivery = async (
   }
 };
 
-// PUT /deliveries/:id/assign-trip -> attach a trip to ONE delivery
+// PATCH/deliveries/:id/assign-trip -> attach a trip to ONE delivery
 export const assignTripToDelivery = async (
   req: Request<{ id: string }, {}, AssignTripBody>,
   res: Response
@@ -286,7 +286,7 @@ export const assignTripToDelivery = async (
   }
 };
 
-// PUT /deliveries/assign-many/to-trip -> attach ONE trip to MANY deliveries in a single call
+// PATCH /deliveries/assign-many/to-trip -> attach ONE trip to MANY deliveries in a single call
 export const assignManyDeliveriesToTrip = async (
   req: Request<{}, {}, AssignManyBody>,
   res: Response

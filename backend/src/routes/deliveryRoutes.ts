@@ -18,9 +18,9 @@ router.post("/", createDelivery);
 router.get("/", getAllDeliveries); 
 router.get("/unassigned", getUnassignedDeliveries); 
 router.get("/:id", getDeliveryById); 
-router.put("/:id", updateDelivery); 
+router.patch("/:id", updateDelivery); 
 router.delete("/:id", deleteDelivery); 
 
-router.put("/:id/assign-trip", assignTripToDelivery); 
-router.put("/assign-many-to-trip", assignManyDeliveriesToTrip); 
+router.patch("/:id/assign-trip", assignTripToDelivery); 
+router.patch("/assign-many-to-trip", assignManyDeliveriesToTrip); 
 export default router;

@@ -5,6 +5,11 @@ import mongoose from "mongoose";
 import { Trip } from "../models/Trip";
 import { Delivery } from "../models/Delivery";
 
+// PATCH /trips/:id/deliveries — body lists deliveries to attach to this trip
+type AssignDeliveriesBody = {
+  deliveryIds: string[];
+};
+
 // Shape of the JSON body expected when creating a trip
 type CreateTripBody = {
   name: string;
@@ -202,6 +207,67 @@ export const getDeliveriesForTrip = async (
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch deliveries for trip",
+      error,
+    });
+  }
+};
+
+// PATCH /trips/:id/deliveries -> assign many deliveries to this trip (trip id from URL)
+export const assignDeliveriesToTrip = async (
+  req: Request<{ id: string }, {}, AssignDeliveriesBody>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id: tripId } = req.params;
+    const { deliveryIds } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      res.status(400).json({ message: "Invalid trip id" });
+      return;
+    }
+
+    const trip = await Trip.findById(tripId);
+    if (!trip) {
+      res.status(404).json({ message: "Trip not found" });
+      return;
+    }
+
+    if (!Array.isArray(deliveryIds) || deliveryIds.length === 0) {
+      res.status(400).json({
+        message: "deliveryIds must be a non-empty array",
+      });
+      return;
+    }
+
+    const invalidId = deliveryIds.find(
+      (deliveryId) => !mongoose.Types.ObjectId.isValid(deliveryId)
+    );
+
+    if (invalidId) {
+      res.status(400).json({
+        message: `Invalid delivery id: ${invalidId}`,
+      });
+      return;
+    }
+
+    const result = await Delivery.updateMany(
+      { _id: { $in: deliveryIds } },
+      {
+        $set: {
+          trip: tripId,
+          status: "assigned",
+        },
+      }
+    );
+
+    res.status(200).json({
+      message: "Deliveries assigned to trip successfully",
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to assign deliveries to trip",
       error,
     });
   }
