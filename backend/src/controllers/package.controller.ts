@@ -1,13 +1,20 @@
 //Logic for CRUD and assigning packages to deliveries.
 
 import { Request, Response } from "express";
+import crypto from "crypto";
 import mongoose from "mongoose";
 import Package from "../models/package.model";
-import { Delivery } from "../models/Delivery";
 
-type AssignDeliveryBody = {
-  deliveryId: string;
+// Generates a tracking number like "PKT-A3F9K2QM".
+// Uses crypto.randomBytes so the output is unpredictable and collision-resistant.
+const generateTrackingNumber = (): string => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const random = crypto
+    .randomBytes(8)
+    .reduce((acc, byte) => acc + chars[byte % chars.length], "");
+  return `PKT-${random}`;
 };
+
 
 const handlePackageWriteError = (
   res: Response,
@@ -45,12 +52,17 @@ const handlePackageWriteError = (
 };
 
 // POST /api/v1/packages -> create a new package
+// The tracking number is always generated server-side; any trackingNumber field
+// the client sends is stripped out and ignored.
 export const createPackage = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   try {
-    const newPackage = await Package.create(req.body); 
+    const { trackingNumber: _ignored, ...rest } = req.body;
+    const trackingNumber = generateTrackingNumber();
+
+    const newPackage = await Package.create({ ...rest, trackingNumber });
 
     res.status(201).json({
       success: true,
@@ -209,81 +221,3 @@ export const deletePackageById = async (
   }
 };
 
-// PATCH /api/v1/packages/:id/assign-delivery -> attach a package to a delivery
-//   Body: { "deliveryId": "<delivery _id>" }
-//   The delivery must already exist. The package status is auto-set to "assigned".
-//   Because the Delivery itself already has a `trip` reference, this also indirectly
-//   places the package on a Trip (Package -> Delivery -> Trip).
-export const assignPackageToDelivery = async (
-  req: Request<{ id: string }, {}, AssignDeliveryBody>,
-  res: Response,
-): Promise<void> => {
-  try {
-    const { id } = req.params; // package id from the URL
-    const { deliveryId } = req.body; // delivery id from the body
-
-    // Validate the package id
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      res.status(400).json({
-        success: false,
-        message: "Invalid package ID",
-      });
-      return;
-    }
-
-    // Validate the delivery id
-    if (!deliveryId || !mongoose.Types.ObjectId.isValid(deliveryId)) {
-      res.status(400).json({
-        success: false,
-        message: "Invalid or missing deliveryId",
-      });
-      return;
-    }
-
-    // Confirm the delivery actually exists before linking to it
-    const delivery = await Delivery.findById(deliveryId);
-    if (!delivery) {
-      res.status(404).json({
-        success: false,
-        message: "Delivery not found",
-      });
-      return;
-    }
-
-    // Update the package: set the delivery reference and bump status -> "assigned"
-    const updatedPackage = await Package.findByIdAndUpdate(
-      id,
-      {
-        delivery: deliveryId,
-        status: "assigned",
-      },
-      {
-        new: true,
-        runValidators: true,
-      },
-    ).populate({
-      path: "delivery",
-      populate: { path: "trip" },
-    });
-
-    if (!updatedPackage) {
-      res.status(404).json({
-        success: false,
-        message: "Package not found",
-      });
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Package assigned to delivery successfully",
-      data: updatedPackage,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to assign package to delivery",
-      error,
-    });
-  }
-};

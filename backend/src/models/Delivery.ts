@@ -12,20 +12,26 @@ export type DeliveryStatus =
 
 
 export interface IDelivery extends Document {
-  trackingNumber: string; 
-  senderName: string; 
-  recipientName: string; 
-  pickupCity: string; 
-  destinationCity: string; 
-  deliveryAddress: string; 
-  trip?: Types.ObjectId; 
-  status: DeliveryStatus; 
-  createdAt: Date; 
-  updatedAt: Date; 
+  package: Types.ObjectId; // the Package this delivery is for
+  trackingNumber: string;  // copied from the Package at creation time
+  senderName: string;
+  recipientName: string;
+  pickupCity: string;
+  destinationCity: string;
+  deliveryAddress: string;
+  trip?: Types.ObjectId;
+  status: DeliveryStatus;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const deliverySchema = new Schema<IDelivery>(
   {
+    package: {
+      type: Schema.Types.ObjectId, // stores a Package _id
+      ref: "Package",              // enables .populate("package")
+      required: true,
+    },
     trackingNumber: {
       type: String,
       required: true, 

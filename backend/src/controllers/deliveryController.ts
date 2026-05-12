@@ -3,16 +3,15 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Delivery, DeliveryStatus } from "../models/Delivery";
+import Package from "../models/package.model";
 import { Trip } from "../models/Trip";
 
 type CreateDeliveryBody = {
-  trackingNumber: string;
-  senderName: string;
-  recipientName: string;
+  packageId: string;       // links to an existing Package; tracking number is inherited from it
   pickupCity: string;
   destinationCity: string;
   deliveryAddress: string;
-  trip?: string; // optional Trip _id (string form)
+  trip?: string;           // optional Trip _id (string form)
   status?: DeliveryStatus;
 };
 
@@ -28,39 +27,45 @@ type AssignManyBody = {
 };
 
 // POST /deliveries -> create a new delivery
+// The client sends a packageId; the server looks up the package and inherits its
+// trackingNumber, senderName, and recipientName. Creating a delivery also writes
+// the delivery's _id back to Package.delivery, completing the two-way link.
 export const createDelivery = async (
   req: Request<{}, {}, CreateDeliveryBody>,
   res: Response
 ): Promise<void> => {
   try {
-    const {
-      trackingNumber,
-      senderName,
-      recipientName,
-      pickupCity,
-      destinationCity,
-      deliveryAddress,
-      trip,
-      status,
-    } = req.body;
+    const { packageId, pickupCity, destinationCity, deliveryAddress, trip, status } =
+      req.body;
 
-    // Validate that all required fields are present
-    if (
-      !trackingNumber ||
-      !senderName ||
-      !recipientName ||
-      !pickupCity ||
-      !destinationCity ||
-      !deliveryAddress
-    ) {
+    // Validate required fields
+    if (!packageId || !pickupCity || !destinationCity || !deliveryAddress) {
       res.status(400).json({
-        message:
-          "trackingNumber, senderName, recipientName, pickupCity, destinationCity, and deliveryAddress are required",
+        message: "packageId, pickupCity, destinationCity, and deliveryAddress are required",
       });
       return;
     }
 
-    // Validate trip & trip_id 
+    // Validate packageId format
+    if (!mongoose.Types.ObjectId.isValid(packageId)) {
+      res.status(400).json({ message: "Invalid package id" });
+      return;
+    }
+
+    // Look up the package — we need its trackingNumber, senderName, and recipientName
+    const pkg = await Package.findById(packageId);
+    if (!pkg) {
+      res.status(404).json({ message: "Package not found" });
+      return;
+    }
+
+    // Guard: a package can only belong to one delivery
+    if (pkg.delivery) {
+      res.status(409).json({ message: "Package already has a delivery assigned" });
+      return;
+    }
+
+    // Validate trip if provided
     if (trip) {
       if (!mongoose.Types.ObjectId.isValid(trip)) {
         res.status(400).json({ message: "Invalid trip id" });
@@ -74,11 +79,12 @@ export const createDelivery = async (
       }
     }
 
-    // Auto-set status: if assigned to a trip on creation, mark as "assigned"
+    // Create the delivery, inheriting identity fields from the package
     const delivery = await Delivery.create({
-      trackingNumber,
-      senderName,
-      recipientName,
+      package: packageId,
+      trackingNumber: pkg.trackingNumber,
+      senderName: pkg.senderName,
+      recipientName: pkg.recipientName,
       pickupCity,
       destinationCity,
       deliveryAddress,
@@ -86,15 +92,22 @@ export const createDelivery = async (
       status: trip ? "assigned" : status || "pending",
     });
 
-    // Populate the trip reference so the client sees the full Trip object
-    const populatedDelivery = await delivery.populate("trip");
+    // Write the delivery reference back to the package, completing the two-way link
+    await Package.findByIdAndUpdate(packageId, {
+      delivery: delivery._id,
+      status: "assigned",
+    });
 
-    res.status(201).json(populatedDelivery); 
+    // Populate both references so the client sees full objects
+    const populatedDelivery = await delivery.populate(["package", "trip"]);
+
+    res.status(201).json(populatedDelivery);
   } catch (error: any) {
-    // 11000 = MongoDB duplicate key error -> trackingNumber must be unique
+    // 11000 = MongoDB duplicate key — shouldn't happen since tracking numbers are
+    // generated uniquely on the package, but kept as a safety net
     if (error?.code === 11000) {
       res.status(409).json({
-        message: "trackingNumber must be unique",
+        message: "A delivery with this tracking number already exists",
       });
       return;
     }
