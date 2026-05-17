@@ -114,8 +114,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-
-// protected controller action 
+// protected controller action
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
@@ -135,6 +134,26 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch authenticated user",
+      error,
+    });
+  }
+};
+
+//Admin only controller
+export const adminOnlyTest = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    res.status(200).json({
+      success: true,
+      message: "Welcome admin, you have access to this route",
+      data: req.user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to access admin route",
       error,
     });
   }
