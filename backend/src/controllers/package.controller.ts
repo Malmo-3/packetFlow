@@ -1,8 +1,20 @@
-//* Contains the logic for creating and fetching packages.
+//Logic for CRUD and assigning packages to deliveries.
 
 import { Request, Response } from "express";
-import Package from "../models/package.model";  
+import crypto from "crypto";
 import mongoose from "mongoose";
+import Package from "../models/package.model";
+
+// Generates a tracking number like "PKT-A3F9K2QM".
+// Uses crypto.randomBytes so the output is unpredictable and collision-resistant.
+const generateTrackingNumber = (): string => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const random = crypto
+    .randomBytes(8)
+    .reduce((acc, byte) => acc + chars[byte % chars.length], "");
+  return `PKT-${random}`;
+};
+
 
 const handlePackageWriteError = (
   res: Response,
@@ -39,12 +51,18 @@ const handlePackageWriteError = (
   });
 };
 
+// POST /api/v1/packages -> create a new package
+// The tracking number is always generated server-side; any trackingNumber field
+// the client sends is stripped out and ignored.
 export const createPackage = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   try {
-    const newPackage = await Package.create(req.body); // new package .. this uses the mongoose model.
+    const { trackingNumber: _ignored, ...rest } = req.body;
+    const trackingNumber = generateTrackingNumber();
+
+    const newPackage = await Package.create({ ...rest, trackingNumber });
 
     res.status(201).json({
       success: true,
@@ -56,12 +74,17 @@ export const createPackage = async (
   }
 };
 
+// GET /api/v1/packages -> fetch all packages (with their delivery + trip populated)
 export const getAllPackages = async (
-  _req: Request,
+  _req: Request, // Express gives me a request object, but it will not be used.
   res: Response,
 ): Promise<void> => {
   try {
-    const packages = await Package.find(); // fetch all package documents from the packages collection
+    // Nested populate: load the package's Delivery, AND inside it the Delivery's Trip
+    const packages = await Package.find().populate({
+      path: "delivery",
+      populate: { path: "trip" },
+    });
 
     res.status(200).json({
       success: true,
@@ -77,10 +100,7 @@ export const getAllPackages = async (
   }
 };
 
-// -----------------------------------------
-// -----------------------------------------
-// getPackageById controller
-
+// GET /api/v1/packages/:id -> fetch one package (with delivery + trip populated)
 export const getPackageById = async (
   req: Request<{ id: string }>,
   res: Response,
@@ -96,7 +116,10 @@ export const getPackageById = async (
       return;
     }
 
-    const singlePackage = await Package.findById(id); // look in the package collection, find one document by its MongoDB _id ..
+    const singlePackage = await Package.findById(id).populate({
+      path: "delivery",
+      populate: { path: "trip" },
+    });
 
     if (!singlePackage) {
       res.status(404).json({
@@ -119,12 +142,7 @@ export const getPackageById = async (
   }
 };
 
-// -----------------------------------------
-// -----------------------------------------
-// Patch
-// mongoose update helper
-// find package by id, update it with value from req.body
-
+// PATCH /api/v1/packages/:id -> update one or more fields of a package
 export const updatePackageById = async (
   req: Request<{ id: string }>,
   res: Response,
@@ -142,7 +160,7 @@ export const updatePackageById = async (
 
     const updatedPackage = await Package.findByIdAndUpdate(id, req.body, {
       new: true, // without this mongoose will return the old document update.. with new: true it returns the update document..
-      runValidators: true, // when updating, still validate the data against the schema... WITHOUT this updates can sometimes bypass some schema validation behaviour.
+      runValidators: true, // when updating, still validate the data against the schema.
     });
 
     if (!updatedPackage) {
@@ -163,17 +181,13 @@ export const updatePackageById = async (
   }
 };
 
-// -----------------------------------------
-// -----------------------------------------
-// deletePackagebyid
-//
-
+// DELETE /api/v1/packages/:id -> delete a package
 export const deletePackageById = async (
   req: Request<{ id: string }>, // request object (incoming data from client)
   res: Response, // response object (what you send back)
 ): Promise<void> => {
   try {
-    const { id } = req.params; // take the id from the URL .. 
+    const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       res.status(400).json({
@@ -206,3 +220,4 @@ export const deletePackageById = async (
     });
   }
 };
+

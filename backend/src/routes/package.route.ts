@@ -7,7 +7,7 @@ import {
   getPackageById,
   updatePackageById,
   deletePackageById,
-} from "../controllers/package.controller"; 
+} from "../controllers/package.controller";
 
 const packageRoute = Router();
 
@@ -16,5 +16,6 @@ packageRoute.get("/", getAllPackages); // GET /api/v1/packages -> fetch all pack
 packageRoute.get("/:id", getPackageById); //  = packages and /:id = /packages/abc12312
 packageRoute.patch("/:id", updatePackageById); // HTTP method = PATCH, route param = :id, controller = updatePackageById > final url becomes /api/v1/packages/:id
 packageRoute.delete("/:id", deletePackageById); // Method = delete, path= /id, controller = deletePackageById > DELETE /api/v1/packages/:id
+
 
 export default packageRoute;
