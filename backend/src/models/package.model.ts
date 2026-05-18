@@ -6,6 +6,9 @@ export interface IPackage {
   trackingNumber: string;
   senderName: string;
   recipientName: string;
+  pickupCity: string;
+  destinationCity: string;
+  deliveryAddress: string;
   weight: number;
   dimensions: {
     length: number;
@@ -30,6 +33,21 @@ const packageSchema = new Schema<IPackage>(
       trim: true,
     },
     recipientName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    pickupCity: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    destinationCity: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    deliveryAddress: {
       type: String,
       required: true,
       trim: true,

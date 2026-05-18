@@ -2,16 +2,13 @@
 
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Delivery, DeliveryStatus } from "../models/Delivery";
+import { Delivery, DeliveryStatus } from "../models/delivery.model";
 import Package from "../models/package.model";
-import { Trip } from "../models/Trip";
+import { Trip } from "../models/trip.model";
 
 type CreateDeliveryBody = {
-  packageId: string;       // links to an existing Package; tracking number is inherited from it
-  pickupCity: string;
-  destinationCity: string;
-  deliveryAddress: string;
-  trip?: string;           // optional Trip _id (string form)
+  packageId: string;  // all shipment details are inherited from the Package
+  trip?: string;      // optional Trip _id (string form)
   status?: DeliveryStatus;
 };
 
@@ -35,14 +32,11 @@ export const createDelivery = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { packageId, pickupCity, destinationCity, deliveryAddress, trip, status } =
-      req.body;
+    const { packageId, trip, status } = req.body;
 
     // Validate required fields
-    if (!packageId || !pickupCity || !destinationCity || !deliveryAddress) {
-      res.status(400).json({
-        message: "packageId, pickupCity, destinationCity, and deliveryAddress are required",
-      });
+    if (!packageId) {
+      res.status(400).json({ message: "packageId is required" });
       return;
     }
 
@@ -79,15 +73,15 @@ export const createDelivery = async (
       }
     }
 
-    // Create the delivery, inheriting identity fields from the package
+    // Create the delivery — all fields inherited from the package
     const delivery = await Delivery.create({
       package: packageId,
       trackingNumber: pkg.trackingNumber,
       senderName: pkg.senderName,
       recipientName: pkg.recipientName,
-      pickupCity,
-      destinationCity,
-      deliveryAddress,
+      pickupCity: pkg.pickupCity,
+      destinationCity: pkg.destinationCity,
+      deliveryAddress: pkg.deliveryAddress,
       trip,
       status: trip ? "assigned" : status || "pending",
     });
@@ -120,13 +114,25 @@ export const createDelivery = async (
 };
 
 // GET /deliveries -> fetch all deliveries (newest first), trip populated
+// Optional query param: ?tripId=<id> -> filter to only deliveries on that trip
 export const getAllDeliveries = async (
-  _req: Request,
+  req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const deliveries = await Delivery.find()
-      .populate("trip") // replace the trip ObjectId with the actual Trip doc
+    const { tripId } = req.query;
+
+    if (tripId) {
+      if (!mongoose.Types.ObjectId.isValid(tripId as string)) {
+        res.status(400).json({ message: "Invalid trip id" });
+        return;
+      }
+    }
+
+    const filter = tripId ? { trip: tripId } : {};
+
+    const deliveries = await Delivery.find(filter)
+      .populate("trip")
       .sort({ createdAt: -1 });
 
     res.status(200).json(deliveries);

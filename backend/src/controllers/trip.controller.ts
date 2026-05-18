@@ -2,8 +2,8 @@
 
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Trip } from "../models/Trip";
-import { Delivery } from "../models/Delivery";
+import { Trip } from "../models/trip.model";
+import { Delivery } from "../models/delivery.model";
 
 // PATCH /trips/:id/deliveries — body lists deliveries to attach to this trip
 type AssignDeliveriesBody = {
@@ -104,7 +104,7 @@ export const getTripById = async (
   }
 };
 
-// PUT /trips/:id -> update an existing trip with the provided fields
+// PATCH /trips/:id -> update an existing trip with the provided fields
 export const updateTrip = async (
   req: Request<{ id: string }, {}, Partial<CreateTripBody>>,
   res: Response
