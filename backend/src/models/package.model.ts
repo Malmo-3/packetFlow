@@ -1,18 +1,22 @@
 //* Defines what a package looks like ..
 
-import { Schema, model } from "mongoose"; 
+import { Schema, model, Types } from "mongoose"; 
 
 export interface IPackage {
   trackingNumber: string;
   senderName: string;
   recipientName: string;
+  pickupCity: string;
+  destinationCity: string;
+  deliveryAddress: string;
   weight: number;
   dimensions: {
     length: number;
     width: number;
     height: number;
   };
-  status: "registered" | "in_transit" | "delivered";
+  delivery?: Types.ObjectId;
+  status: "registered" | "assigned" | "in_transit" | "delivered";
 }
 
 const packageSchema = new Schema<IPackage>(
@@ -29,6 +33,21 @@ const packageSchema = new Schema<IPackage>(
       trim: true,
     },
     recipientName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    pickupCity: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    destinationCity: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    deliveryAddress: {
       type: String,
       required: true,
       trim: true,
@@ -55,9 +74,14 @@ const packageSchema = new Schema<IPackage>(
         min: 0,
       },
     },
+    delivery: {
+      type: Schema.Types.ObjectId, // stores a Delivery _id
+      ref: "Delivery", // enables .populate("delivery") to load the related Delivery
+      required: false, // a package can exist before being added to a delivery
+    },
     status: {
       type: String,
-      enum: ["registered", "in_transit", "delivered"],
+      enum: ["registered", "assigned", "in_transit", "delivered"],
       default: "registered",
     },
   },
