@@ -1,23 +1,28 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import jwt, { SignOptions } from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 import User from "../models/user.model";
 import type { LoginInput, RegisterInput } from "../schemas/auth.schemas";
+import ConflictError from "../errors/ConflictError";
+import UnauthorizedError from "../errors/UnauthorizedError";
 
 export const registerUser = async (
   req: Request,
   res: Response,
+  next: NextFunction,
 ): Promise<void> => {
   try {
-    const { fullName, email, password, role } = req.validatedBody as RegisterInput;
+    const { fullName, email, password, role } =
+      req.validatedBody as RegisterInput;
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      res.status(409).json({
-        success: false,
-        message: "User already exists with this email",
-      });
+      next(new ConflictError("User already exists with this email"));
+      // res.status(409).json({
+      //   success: false,
+      //   message: "User already exists with this email",
+      // });
       return;
     }
 
@@ -41,35 +46,42 @@ export const registerUser = async (
       },
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to register user",
-      error,
-    });
+    next(error);
+    // res.status(500).json({
+    //   success: false,
+    //   message: "Failed to register user",
+    //   error,
+    // });
   }
 };
 
-export const loginUser = async (req: Request, res: Response): Promise<void> => {
+export const loginUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     const { email, password } = req.validatedBody as LoginInput;
 
     const user = await User.findOne({ email });
 
     if (!user) {
-      res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
+      next(new UnauthorizedError("Invalid email or password"));
+      // res.status(401).json({
+      //   success: false,
+      //   message: "Invalid email or password",
+      // });
       return;
     }
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
 
     if (!isPasswordMatch) {
-      res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
+      next(new UnauthorizedError("Invalid email or password"));
+      // res.status(401).json({
+      //   success: false,
+      //   message: "Invalid email or password",
+      // });
       return;
     }
 
@@ -87,7 +99,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
     const token = jwt.sign(
       {
-        userId: user._id,
+        userId: user._id.toString(),
         email: user.email,
         role: user.role,
       },
@@ -107,22 +119,28 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to login user",
-      error,
-    });
+    next(error);
+    // res.status(500).json({
+    //   success: false,
+    //   message: "Failed to login user",
+    //   error,
+    // });
   }
 };
 
 // protected controller action
-export const getMe = async (req: Request, res: Response): Promise<void> => {
+export const getMe = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     if (!req.user) {
-      res.status(401).json({
-        success: false,
-        message: "User not authenticated",
-      });
+      next(new UnauthorizedError("User not authenticated"));
+      // res.status(401).json({
+      //   success: false,
+      //   message: "User not authenticated",
+      // });
       return;
     }
 
@@ -132,11 +150,12 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       data: req.user,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch authenticated user",
-      error,
-    });
+    next(error);
+    // res.status(500).json({
+    //   success: false,
+    //   message: "Failed to fetch authenticated user",
+    //   error,
+    // });
   }
 };
 
@@ -144,18 +163,25 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
 export const adminOnlyTest = async (
   req: Request,
   res: Response,
+  next: NextFunction,
 ): Promise<void> => {
   try {
+    if (!req.user) {
+      next(new UnauthorizedError("User not authenticated"));
+      return;
+    }
+
     res.status(200).json({
       success: true,
       message: "Welcome admin, you have access to this route",
       data: req.user,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to access admin route",
-      error,
-    });
+    next(error);
+    // res.status(500).json({
+    //   success: false,
+    //   message: "Failed to access admin route",
+    //   error,
+    // });
   }
 };
