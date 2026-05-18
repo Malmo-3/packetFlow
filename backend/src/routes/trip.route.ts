@@ -11,7 +11,7 @@ import {
   getDeliveriesForTrip,
   getTripById,
   updateTrip,
-} from "../controllers/tripController";
+} from "../controllers/trip.controller";
 
 const router = express.Router();
 

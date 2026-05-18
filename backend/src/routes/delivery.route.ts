@@ -10,7 +10,7 @@ import {
   getDeliveryById,
   getUnassignedDeliveries,
   updateDelivery,
-} from "../controllers/deliveryController";
+} from "../controllers/delivery.controller";
 
 const router = express.Router();
 

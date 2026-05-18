@@ -3,8 +3,8 @@
 import { Router } from "express";
 import testRoute from "./test.route";
 import packageRoute from "./package.route";
-import tripRoutes from "./tripRoutes";
-import deliveryRoutes from "./deliveryRoutes";
+import tripRoutes from "./trip.route";
+import deliveryRoutes from "./delivery.route";
 import authRoute from "./auth.route";
 
 const router = Router();
