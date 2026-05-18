@@ -1,9 +1,10 @@
 import express from "express";
 import cors from "cors";
 import requestLogger from "./middleware/requestLogger";
-import validateJson from "./middleware/validlateJson";
+import validateJson from "./middleware/validateJson";
 import notFound from "./middleware/notFound";
 import routes from "./routes";
+import errorHandler from "./middleware/errorHandler";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.get("/", (_req, res) => {
 app.use("/api/v1", routes);
 
 app.use(notFound);
+app.use(errorHandler);
 
 export default app;
 

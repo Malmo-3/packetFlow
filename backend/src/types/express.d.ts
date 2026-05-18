@@ -6,6 +6,9 @@ declare global {
         email: string;
         role: string;
       };
+      validatedBody?: unknown;
+      validatedParams?: unknown;
+      validatedQuery?: unknown;
     }
   }
 }

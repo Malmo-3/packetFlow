@@ -2,13 +2,14 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt, { SignOptions } from "jsonwebtoken";
 import User from "../models/user.model";
+import type { LoginInput, RegisterInput } from "../schemas/auth.schemas";
 
 export const registerUser = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   try {
-    const { fullName, email, password, role } = req.body;
+    const { fullName, email, password, role } = req.validatedBody as RegisterInput;
 
     const existingUser = await User.findOne({ email });
 
@@ -50,7 +51,7 @@ export const registerUser = async (
 
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.validatedBody as LoginInput;
 
     const user = await User.findOne({ email });
 
