@@ -10,7 +10,7 @@ import {
   getAllTrips,
   getDeliveriesForTrip,
   getTripById,
-  updateTrip,
+  updateTrip, 
 } from "../controllers/trip.controller";
 
 const router = express.Router();

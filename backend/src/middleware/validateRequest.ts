@@ -7,7 +7,7 @@ type ValidationSchemas = {
   params?: z.ZodType;
   query?: z.ZodType;
 };
-
+ 
 const validateRequest =
   ({ body, params, query }: ValidationSchemas) =>
   (req: Request, _res: Response, next: NextFunction): void => {
@@ -16,7 +16,7 @@ const validateRequest =
 
       if (!result.success) {
         next(
-          new BadRequestError(
+          new BadRequestError( 
             "Request body validation failed",
             result.error.flatten(),
           ),

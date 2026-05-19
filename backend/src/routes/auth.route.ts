@@ -12,4 +12,4 @@ authRoute.post("/login", validateRequest({ body: loginSchema }), loginUser);
 authRoute.get("/me", authMiddleware, getMe);
 authRoute.get("/admin-test", authMiddleware, authorizeRoles("admin"), adminOnlyTest);
 
-export default authRoute;
+export default authRoute; 

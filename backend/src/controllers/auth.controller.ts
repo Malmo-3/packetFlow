@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import User from "../models/user.model";
-import type { LoginInput, RegisterInput } from "../schemas/auth.schemas";
+import type { LoginInput, RegisterInput } from "../schemas/auth.schemas"; 
 import ConflictError from "../errors/ConflictError";
 import UnauthorizedError from "../errors/UnauthorizedError";
 
