@@ -6,6 +6,7 @@ import packageRoute from "./package.route";
 import tripRoutes from "./trip.route";
 import deliveryRoutes from "./delivery.route";
 import authRoute from "./auth.route";
+import carrierRoute from "./carrier.route";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/auth", authRoute);
 router.use("/packages", packageRoute);
 router.use("/trips", tripRoutes);
 router.use("/deliveries", deliveryRoutes);
+router.use("/carrier", carrierRoute);
 
 export default router;
