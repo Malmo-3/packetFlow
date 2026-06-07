@@ -1,5 +1,12 @@
 {
-  "dependencies": {
-    "mongoose": "^9.4.1"
+  "name": "packetflow",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm --prefix apps/backend run dev",
+    "build:backend": "npm --prefix apps/backend run build",
+    "start:backend": "npm --prefix apps/backend run start"
   }
 }
