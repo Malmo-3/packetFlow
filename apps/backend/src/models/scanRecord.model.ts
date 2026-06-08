@@ -1,37 +1,44 @@
-//* Defines package scan records created by carrier flow.
-
 import { Schema, Types, model } from "mongoose";
-import { IPackage } from "./package.model";
+import type { IPackage } from "./package.model";
 
-export type ScanResult = "valid";
+export type ScanResult = "valid" | "duplicate" | "exception";
 
 export interface IScanRecord {
-  carrierId: string;
-  tripId: Types.ObjectId;
-  packageId: Types.ObjectId;
+  carrier?: Types.ObjectId;
+  trip?: Types.ObjectId;
+  package: Types.ObjectId;
+  checkpoint: Types.ObjectId;
   scanCode: string;
   result: ScanResult;
   packageStatusAfter: IPackage["status"];
+  latitude: number;
+  longitude: number;
   scannedAt: Date;
 }
 
 const scanRecordSchema = new Schema<IScanRecord>(
   {
-    carrierId: {
-      type: String,
-      required: true,
-      trim: true,
+    carrier: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
       index: true,
     },
-    tripId: {
+    trip: {
       type: Schema.Types.ObjectId,
       ref: "Trip",
+      required: false,
+      index: true,
+    },
+    package: {
+      type: Schema.Types.ObjectId,
+      ref: "Package",
       required: true,
       index: true,
     },
-    packageId: {
+    checkpoint: {
       type: Schema.Types.ObjectId,
-      ref: "Package",
+      ref: "Checkpoint",
       required: true,
       index: true,
     },
@@ -42,12 +49,20 @@ const scanRecordSchema = new Schema<IScanRecord>(
     },
     result: {
       type: String,
-      enum: ["valid"],
+      enum: ["valid", "duplicate", "exception"],
       default: "valid",
     },
     packageStatusAfter: {
       type: String,
-      enum: ["registered", "in_transit", "delivered"],
+      enum: ["registered", "assigned", "in_transit", "delivered"],
+      required: true,
+    },
+    latitude: {
+      type: Number,
+      required: true,
+    },
+    longitude: {
+      type: Number,
       required: true,
     },
     scannedAt: {

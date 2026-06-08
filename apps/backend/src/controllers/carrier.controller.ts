@@ -5,7 +5,7 @@ import mongoose, { HydratedDocument } from "mongoose";
 import { Delivery, IDelivery } from "../models/delivery.model";
 import Package, { IPackage } from "../models/package.model";
 import ScanRecord from "../models/scanRecord.model";
-import { ITrip, Trip } from "../models/trip.model";
+import Trip, { type ITrip } from "../models/trip.model";
 
 interface TripParams {
   [key: string]: string;

@@ -1,27 +1,22 @@
-//Defines the schema and model for a trip(route) for deliveries.
-
-import { Schema, model, Document, Types } from "mongoose";
+import { Schema, model, Types } from "mongoose";
 
 export type TripStatus = "planned" | "active" | "completed";
 
-
-export interface ITrip extends Document {
-  name: string; 
-  region: string; 
-  startCity: string; 
-  endCity: string; 
-  stops: string[]; 
-  assignedCarrier?: Types.ObjectId; 
-  status: TripStatus; 
-  createdAt: Date; 
-  updatedAt: Date; 
+export interface ITrip {
+  name: string;
+  region: string;
+  startCity: string;
+  endCity: string;
+  stops: string[];
+  assignedCarrier?: Types.ObjectId;
+  status: TripStatus;
 }
 
 const tripSchema = new Schema<ITrip>(
   {
     name: {
       type: String,
-      required: true, 
+      required: true,
       trim: true,
     },
     region: {
@@ -41,12 +36,13 @@ const tripSchema = new Schema<ITrip>(
       trim: true,
     },
     stops: {
-      type: [String], 
+      type: [String],
       default: [],
     },
     assignedCarrier: {
-      type: Schema.Types.ObjectId, // stores a User _id
-      ref: "User", // enables .populate("assignedCarrier") to load the related User
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
     },
     status: {
       type: String,
@@ -54,8 +50,11 @@ const tripSchema = new Schema<ITrip>(
       default: "planned",
     },
   },
-  { timestamps: true } 
+  {
+    timestamps: true,
+  },
 );
 
+const Trip = model<ITrip>("Trip", tripSchema);
 
-export const Trip = model<ITrip>("Trip", tripSchema);
+export default Trip;

@@ -1,7 +1,4 @@
-// Defines the schema and model for a delivery.
-
-import { Schema, model, Document, Types } from "mongoose";
-
+import { Schema, model, Types } from "mongoose";
 
 export type DeliveryStatus =
   | "pending"
@@ -10,10 +7,9 @@ export type DeliveryStatus =
   | "delivered"
   | "cancelled";
 
-
-export interface IDelivery extends Document {
-  package: Types.ObjectId; // the Package this delivery is for
-  trackingNumber: string;  // copied from the Package at creation time
+export interface IDelivery {
+  package: Types.ObjectId;
+  trackingNumber: string;
   senderName: string;
   recipientName: string;
   pickupCity: string;
@@ -21,22 +17,20 @@ export interface IDelivery extends Document {
   deliveryAddress: string;
   trip?: Types.ObjectId;
   status: DeliveryStatus;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 const deliverySchema = new Schema<IDelivery>(
   {
     package: {
-      type: Schema.Types.ObjectId, // stores a Package _id
-      ref: "Package",              // enables .populate("package")
+      type: Schema.Types.ObjectId,
+      ref: "Package",
       required: true,
     },
     trackingNumber: {
       type: String,
-      required: true, 
-      unique: true, 
-      trim: true, 
+      required: true,
+      unique: true,
+      trim: true,
     },
     senderName: {
       type: String,
@@ -64,18 +58,19 @@ const deliverySchema = new Schema<IDelivery>(
       trim: true,
     },
     trip: {
-      type: Schema.Types.ObjectId, // stores a Trip _id
-      ref: "Trip", // enables .populate("trip") to load the related Trip
-      required: false, // a delivery can exist before being assigned to a trip
+      type: Schema.Types.ObjectId,
+      ref: "Trip",
+      required: false,
     },
     status: {
       type: String,
-      enum: ["pending", "assigned", "in_transit", "delivered", "cancelled"], 
-      default: "pending", 
+      enum: ["pending", "assigned", "in_transit", "delivered", "cancelled"],
+      default: "pending",
     },
   },
-  { timestamps: true } 
+  {
+    timestamps: true,
+  },
 );
-
 
 export const Delivery = model<IDelivery>("Delivery", deliverySchema);
