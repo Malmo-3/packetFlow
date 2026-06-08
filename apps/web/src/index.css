@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* PacketFlow design system — Uber-inspired black-and-white duet.
+   Light mode by default. Dark mode via .dark class on <html> (Tailwind class strategy).
+
+   LIGHT:  white canvas (#fff), black ink (#000), gray surfaces for inputs/chips.
+   DARK:   black canvas (#000), white ink (#fff), elevated dark surfaces.
+   Both modes share the pill (9999px) shape signature and the same type scale.    */
+
+@layer base {
+  :root {
+    /* ── Light mode ──────────────────────────────────────── */
+    --background:            0 0% 100%;       /* #ffffff canvas */
+    --foreground:            0 0% 0%;         /* #000000 ink */
+
+    --card:                  0 0% 100%;
+    --card-foreground:       0 0% 0%;
+
+    --popover:               0 0% 100%;
+    --popover-foreground:    0 0% 0%;
+
+    --primary:               0 0% 0%;         /* black CTA pill */
+    --primary-foreground:    0 0% 100%;       /* white text on black */
+
+    --secondary:             0 0% 94%;        /* #efefef canvas-soft */
+    --secondary-foreground:  0 0% 0%;
+
+    --muted:                 0 0% 95%;        /* #f3f3f3 canvas-softer */
+    --muted-foreground:      0 0% 37%;        /* #5e5e5e body text */
+
+    --accent:                0 0% 94%;
+    --accent-foreground:     0 0% 0%;
+
+    --destructive:           0 72% 51%;
+    --destructive-foreground:0 0% 100%;
+
+    --success:               142 70% 38%;
+    --success-foreground:    0 0% 100%;
+    --warning:               38 92% 50%;
+    --warning-foreground:    0 0% 0%;
+    --info:                  210 90% 50%;
+    --info-foreground:       0 0% 100%;
+
+    --border:                0 0% 89%;        /* #e2e2e2 surface-pressed */
+    --input:                 0 0% 94%;        /* #efefef canvas-soft */
+    --ring:                  0 0% 0%;         /* black focus ring */
+
+    --radius:                1rem;            /* 16px xl — canonical card radius */
+
+    /* Sidebar — white, black accents */
+    --sidebar-background:    0 0% 100%;
+    --sidebar-foreground:    0 0% 0%;
+    --sidebar-primary:       0 0% 0%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:        0 0% 95%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border:        0 0% 89%;
+    --sidebar-ring:          0 0% 0%;
+  }
+
+  .dark {
+    /* ── Dark mode ───────────────────────────────────────── */
+    --background:            0 0% 4%;         /* #0a0a0a near-black canvas */
+    --foreground:            0 0% 98%;        /* #fafafa near-white ink */
+
+    --card:                  0 0% 8%;         /* #141414 elevated surface */
+    --card-foreground:       0 0% 98%;
+
+    --popover:               0 0% 8%;
+    --popover-foreground:    0 0% 98%;
+
+    /* In dark mode primary inverts: white pill, black label */
+    --primary:               0 0% 98%;        /* #fafafa CTA pill */
+    --primary-foreground:    0 0% 4%;         /* near-black text on white */
+
+    --secondary:             0 0% 12%;        /* #1e1e1e elevated chip */
+    --secondary-foreground:  0 0% 98%;
+
+    --muted:                 0 0% 10%;        /* #1a1a1a subtle fill */
+    --muted-foreground:      0 0% 53%;        /* #888 muted text */
+
+    --accent:                0 0% 12%;
+    --accent-foreground:     0 0% 98%;
+
+    --destructive:           0 72% 51%;
+    --destructive-foreground:0 0% 100%;
+
+    --success:               142 60% 45%;
+    --success-foreground:    0 0% 100%;
+    --warning:               38 92% 50%;
+    --warning-foreground:    0 0% 0%;
+    --info:                  210 90% 60%;
+    --info-foreground:       0 0% 100%;
+
+    --border:                0 0% 16%;        /* #282828 black-elevated */
+    --input:                 0 0% 12%;        /* dark chip/input fill */
+    --ring:                  0 0% 98%;        /* white focus ring */
+
+    /* Sidebar — near-black, white accents */
+    --sidebar-background:    0 0% 6%;         /* #0f0f0f */
+    --sidebar-foreground:    0 0% 98%;
+    --sidebar-primary:       0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent:        0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border:        0 0% 14%;
+    --sidebar-ring:          0 0% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Elevated card shadow (form cards, modals) */
+  .shadow-card {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Floating pill shadow */
+  .shadow-pill {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  }
+
+  /* Dark promo band helper */
+  .band-dark {
+    @apply bg-foreground text-background;
+  }
+}

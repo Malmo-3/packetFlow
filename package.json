@@ -10,7 +10,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+     "dev:backend":    "npm -w @packetflow/apps/backend run dev",
+    "dev:web":    "npm -w @packetflow/web run dev",
+    "build:backend":  "npm -w @packetflow/apps/backend run build",
+    "build:web":  "npm -w @packetflow/web run build",
+    "test":       "npm -w @packetflow/apps/backend run test"
   },
   "repository": {
     "type": "git",
