@@ -4,127 +4,89 @@ import Package from "../models/package.model";
 import Checkpoint from "../models/checkpoint.model";
 import Trip from "../models/trip.model";
 import User from "../models/user.model";
+import { Delivery, type DeliveryStatus } from "../models/delivery.model";
 import NotFoundError from "../errors/NotFoundError";
+import { dispatchPackageStatusWebhooks } from "../utils/webhookDispatch";
+import type { PackageStatus } from "../shared/skane";
 import type {
   CreateScanRecordInput,
   PackageIdParams,
   ScanRecordIdParams,
 } from "../schemas/scanRecord.schemas";
-import { Delivery } from "../models/delivery.model";
-import { sendWebhookEvent } from "../utils/sendWebhookEvent";
 
-//
+// Map a package status onto the corresponding delivery status.
+const deliveryStatusMap: Record<PackageStatus, DeliveryStatus> = {
+  registered: "pending",
+  assigned: "assigned",
+  in_transit: "in_transit",
+  out_for_delivery: "in_transit",
+  delivered: "delivered",
+  exception: "cancelled",
+};
+
 export const createScanRecord = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const validatedBody = req.validatedBody as CreateScanRecordInput;
+    const body = req.validatedBody as CreateScanRecordInput;
 
-    const pkg = await Package.findById(validatedBody.package);
-    if (!pkg) {
-      next(new NotFoundError("Package not found"));
-      return;
+    const pkg = await Package.findById(body.package);
+    if (!pkg) return next(new NotFoundError("Package not found"));
+
+    const checkpoint = await Checkpoint.findById(body.checkpoint);
+    if (!checkpoint) return next(new NotFoundError("Checkpoint not found"));
+
+    if (body.trip) {
+      const trip = await Trip.findById(body.trip);
+      if (!trip) return next(new NotFoundError("Trip not found"));
+    }
+    if (body.carrier) {
+      const carrier = await User.findById(body.carrier);
+      if (!carrier) return next(new NotFoundError("Carrier not found"));
     }
 
-    const checkpoint = await Checkpoint.findById(validatedBody.checkpoint);
-    if (!checkpoint) {
-      next(new NotFoundError("Checkpoint not found"));
-      return;
-    }
-
-    if (validatedBody.trip) {
-      const trip = await Trip.findById(validatedBody.trip);
-      if (!trip) {
-        next(new NotFoundError("Trip not found"));
-        return;
-      }
-    }
-
-    if (validatedBody.carrier) {
-      const carrier = await User.findById(validatedBody.carrier);
-      if (!carrier) {
-        next(new NotFoundError("Carrier not found"));
-        return;
-      }
-    }
-
-    const effectiveScannedAt = validatedBody.scannedAt || new Date();
+    const effectiveScannedAt = body.scannedAt || new Date();
 
     const scanRecord = await ScanRecord.create({
-      ...validatedBody,
-      result: validatedBody.result || "valid",
+      ...body,
+      result: body.result || "valid",
       scannedAt: effectiveScannedAt,
     });
 
-    const deliveryStatusMap = {
-      registered: "pending",
-      assigned: "assigned",
-      in_transit: "in_transit",
-      delivered: "delivered",
-    } as const;
-
-    await Package.findByIdAndUpdate(validatedBody.package, {
-      status: validatedBody.packageStatusAfter,
+    await Package.findByIdAndUpdate(body.package, {
+      status: body.packageStatusAfter,
     });
 
-    let updatedDelivery = null;
-
     if (pkg.delivery) {
-      updatedDelivery = await Delivery.findByIdAndUpdate(
-        pkg.delivery,
-        {
-          status: deliveryStatusMap[validatedBody.packageStatusAfter],
-        },
-        { new: true },
-      );
+      await Delivery.findByIdAndUpdate(pkg.delivery, {
+        status: deliveryStatusMap[body.packageStatusAfter],
+      });
     }
 
-    await Promise.allSettled([
-      sendWebhookEvent("scan.created", {
-        scanId: scanRecord._id.toString(),
-        trackingNumber: pkg.trackingNumber,
-        packageId: pkg._id.toString(),
-        checkpointId: validatedBody.checkpoint,
-        tripId: validatedBody.trip ?? null,
-        carrierId: validatedBody.carrier ?? null,
-        scanCode: validatedBody.scanCode,
-        result: validatedBody.result || "valid",
-        packageStatusAfter: validatedBody.packageStatusAfter,
-        latitude: validatedBody.latitude,
-        longitude: validatedBody.longitude,
+    // Notify subscribers of the new package status (records WebhookLog entries).
+    await dispatchPackageStatusWebhooks({
+      status: body.packageStatusAfter,
+      packageId: String(pkg._id),
+      trackingNumber: pkg.trackingNumber,
+      extra: {
+        scanId: String(scanRecord._id),
+        checkpointId: body.checkpoint,
+        latitude: body.latitude,
+        longitude: body.longitude,
         scannedAt: effectiveScannedAt.toISOString(),
-      }),
-      sendWebhookEvent("package.status_changed", {
-        packageId: pkg._id.toString(),
-        trackingNumber: pkg.trackingNumber,
-        status: validatedBody.packageStatusAfter,
-      }),
-      ...(updatedDelivery
-        ? [
-            sendWebhookEvent("delivery.status_changed", {
-              deliveryId: updatedDelivery._id.toString(),
-              packageId: pkg._id.toString(),
-              trackingNumber: pkg.trackingNumber,
-              status: deliveryStatusMap[validatedBody.packageStatusAfter],
-            }),
-          ]
-        : []),
-    ]);
+      },
+    });
 
-    const populatedScanRecord = await scanRecord.populate([
+    const populated = await scanRecord.populate([
       "package",
       "checkpoint",
       "trip",
       "carrier",
     ]);
 
-    res.status(201).json({
-      success: true,
-      message: "Scan record created successfully",
-      data: populatedScanRecord,
-    });
+    res.status(201).json({ success: true, message: "Scan record created successfully", data: populated });
   } catch (error) {
     next(error);
   }
@@ -139,12 +101,7 @@ export const getAllScanRecords = async (
     const scanRecords = await ScanRecord.find()
       .populate(["package", "checkpoint", "trip", "carrier"])
       .sort({ scannedAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: scanRecords.length,
-      data: scanRecords,
-    });
+    res.status(200).json({ success: true, count: scanRecords.length, data: scanRecords });
   } catch (error) {
     next(error);
   }
@@ -157,23 +114,14 @@ export const getScanRecordById = async (
 ): Promise<void> => {
   try {
     const { id } = req.validatedParams as ScanRecordIdParams;
-
     const scanRecord = await ScanRecord.findById(id).populate([
       "package",
       "checkpoint",
       "trip",
       "carrier",
     ]);
-
-    if (!scanRecord) {
-      next(new NotFoundError("Scan record not found"));
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      data: scanRecord,
-    });
+    if (!scanRecord) return next(new NotFoundError("Scan record not found"));
+    res.status(200).json({ success: true, data: scanRecord });
   } catch (error) {
     next(error);
   }
@@ -186,24 +134,17 @@ export const getScanHistoryForPackage = async (
 ): Promise<void> => {
   try {
     const { packageId } = req.validatedParams as PackageIdParams;
-
     const pkg = await Package.findById(packageId);
-    if (!pkg) {
-      next(new NotFoundError("Package not found"));
-      return;
-    }
+    if (!pkg) return next(new NotFoundError("Package not found"));
 
-    const scanHistory = await ScanRecord.find({ package: packageId })
+    const history = await ScanRecord.find({ package: packageId })
       .populate(["checkpoint", "trip", "carrier"])
       .sort({ scannedAt: 1 });
 
     res.status(200).json({
       success: true,
-      count: scanHistory.length,
-      data: {
-        package: pkg,
-        history: scanHistory,
-      },
+      count: history.length,
+      data: { package: pkg, history },
     });
   } catch (error) {
     next(error);

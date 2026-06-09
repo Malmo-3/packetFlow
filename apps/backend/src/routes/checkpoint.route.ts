@@ -6,6 +6,8 @@ import {
   getCheckpointById,
   updateCheckpoint,
 } from "../controllers/checkpoint.controller";
+import authMiddleware from "../middleware/auth.middleware";
+import { permit } from "../middleware/rbac";
 import validateRequest from "../middleware/validateRequest";
 import {
   checkpointIdParamSchema,
@@ -15,31 +17,30 @@ import {
 
 const checkpointRoute = Router();
 
-checkpointRoute.post(
-  "/",
-  validateRequest({ body: createCheckpointSchema }),
-  createCheckpoint,
-);
+checkpointRoute.use(authMiddleware);
 
 checkpointRoute.get("/", getAllCheckpoints);
-
 checkpointRoute.get(
   "/:id",
   validateRequest({ params: checkpointIdParamSchema }),
   getCheckpointById,
 );
 
+checkpointRoute.post(
+  "/",
+  permit("admin"),
+  validateRequest({ body: createCheckpointSchema }),
+  createCheckpoint,
+);
 checkpointRoute.patch(
   "/:id",
-  validateRequest({
-    params: checkpointIdParamSchema,
-    body: updateCheckpointSchema,
-  }),
+  permit("admin"),
+  validateRequest({ params: checkpointIdParamSchema, body: updateCheckpointSchema }),
   updateCheckpoint,
 );
-
 checkpointRoute.delete(
   "/:id",
+  permit("admin"),
   validateRequest({ params: checkpointIdParamSchema }),
   deleteCheckpoint,
 );

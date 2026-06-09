@@ -4,7 +4,7 @@ import { AlertCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { getPackageByCode } from "@/api/packages";
+import { getPackageByCode } from "@/features/packages/packagesApi";
 
 export default function RecipientTrack() {
   const navigate = useNavigate();

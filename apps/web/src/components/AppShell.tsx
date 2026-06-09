@@ -28,14 +28,16 @@ import {
   Send,
   Star,
   Sun,
+  UserCheck,
   Users,
   Webhook as WebhookIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { useNotifications } from "@/api/hooks/useNotifications";
+import { useNotifications } from "@/hooks/useNotifications";
 import type { Role } from "@packetflow/types";
 import type { ReactNode } from "react";
 
@@ -59,13 +61,14 @@ const NAV: Record<Role, NavItem[]> = {
   admin: [
     { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
     { to: "/admin/packages", label: "Packages", icon: Boxes },
-    { to: "/admin/routes", label: "Routes", icon: RouteIcon },
+    { to: "/admin/trips", label: "Trips", icon: RouteIcon },
     { to: "/admin/users", label: "Users", icon: Users },
+    { to: "/admin/applications", label: "Applications", icon: UserCheck },
     { to: "/admin/webhooks", label: "Webhooks", icon: WebhookIcon },
   ],
   carrier: [
     { to: "/carrier/packages", label: "Packages", icon: Boxes },
-    { to: "/carrier/routes", label: "Routes", icon: RouteIcon },
+    { to: "/carrier/trips", label: "Trips", icon: RouteIcon },
   ],
 };
 
@@ -87,8 +90,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!user) return null;
 
   const items = NAV[user.role];
-  const isActive = (item: NavItem) =>
-    item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
+  // Highlight only the single best-matching nav item (the longest matching
+  // path prefix). This prevents nested routes such as /sender/packages/new
+  // from also lighting up the parent /sender/packages ("My shipments") entry.
+  const pathMatches = (to: string) =>
+    location.pathname === to || location.pathname.startsWith(to + "/");
+  const activeTo = items
+    .filter((it) => pathMatches(it.to))
+    .sort((a, b) => b.to.length - a.to.length)[0]?.to;
+  const isActive = (item: NavItem) => item.to === activeTo;
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -96,15 +106,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* ── Desktop sidebar ────────────────────────────────────────────── */}
       <aside className="hidden w-64 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
 
-        {/* Logo — swaps between light and dark variants */}
+        {/* Logo — inline SVG that follows the sidebar's text colour */}
         <div className="px-6 py-5">
-          <img
-            src={theme === "dark" ? "/logo-dark.svg" : "/logo.svg"}
-            alt="PacketFlow"
-            width="130"
-            height="36"
-            className="h-9 w-auto"
-          />
+          <Logo className="h-9 w-auto text-sidebar-foreground" />
         </div>
 
         {/* Nav items */}
@@ -187,13 +191,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Mobile top bar */}
         <header className="flex items-center justify-between border-b border-border bg-background px-4 py-3 md:hidden">
-          <img
-            src={theme === "dark" ? "/logo-dark.svg" : "/logo.svg"}
-            alt="PacketFlow"
-            width="110"
-            height="30"
-            className="h-7 w-auto"
-          />
+          <Logo className="h-7 w-auto" />
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

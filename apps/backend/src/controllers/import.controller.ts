@@ -3,8 +3,8 @@ import crypto from "crypto";
 import { parse } from "csv-parse/sync";
 import Package from "../models/package.model";
 import BadRequestError from "../errors/BadRequestError";
+import { DROP_OFF_POINTS } from "../shared/skane";
 import {
-  importPackagesJsonSchema,
   packageImportItemSchema,
   type ImportPackagesJsonInput,
   type PackageImportItemInput,
@@ -18,17 +18,14 @@ const generateTrackingNumber = (): string => {
   return `PKT-${random}`;
 };
 
-type ImportFailure = {
-  index: number;
-  input: PackageImportItemInput;
-  message: string;
-};
-
-type CsvImportFailure = {
-  rowNumber: number;
-  input: Record<string, string | undefined>;
-  message: string;
-};
+/** Build the persisted package doc from a validated import item (resolves depots + tracking). */
+const toPackageDoc = (item: PackageImportItemInput) => ({
+  ...item,
+  trackingNumber: generateTrackingNumber(),
+  dropOffPoint: DROP_OFF_POINTS[item.pickupCity],
+  pickUpPoint: DROP_OFF_POINTS[item.destinationCity],
+  status: "registered" as const,
+});
 
 export const importPackagesFromJson = async (
   req: Request,
@@ -36,30 +33,24 @@ export const importPackagesFromJson = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const validatedBody = req.validatedBody as ImportPackagesJsonInput;
+    const body = req.validatedBody as ImportPackagesJsonInput;
 
     const createdPackages = [];
-    const failedPackages: ImportFailure[] = [];
+    const failedPackages: Array<{
+      index: number;
+      input: PackageImportItemInput;
+      message: string;
+    }> = [];
 
-    for (let index = 0; index < validatedBody.packages.length; index += 1) {
-      const packageItem = validatedBody.packages[index];
-
+    for (let index = 0; index < body.packages.length; index += 1) {
+      const item = body.packages[index];
       try {
-        const createdPackage = await Package.create({
-          ...packageItem,
-          trackingNumber: generateTrackingNumber(),
-          status: packageItem.status || "registered",
-        });
-
-        createdPackages.push(createdPackage);
+        createdPackages.push(await Package.create(toPackageDoc(item)));
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to import package";
-
         failedPackages.push({
           index,
-          input: packageItem,
-          message,
+          input: item,
+          message: error instanceof Error ? error.message : "Failed to import package",
         });
       }
     }
@@ -68,7 +59,7 @@ export const importPackagesFromJson = async (
       success: true,
       message: "Package JSON import completed",
       data: {
-        totalReceived: validatedBody.packages.length,
+        totalReceived: body.packages.length,
         createdCount: createdPackages.length,
         failedCount: failedPackages.length,
         createdPackages,
@@ -83,23 +74,20 @@ export const importPackagesFromJson = async (
 type CsvPackageRow = {
   senderName?: string;
   recipientName?: string;
+  recipientEmail?: string;
+  recipientPhone?: string;
+  recipientAddress?: string;
   pickupCity?: string;
   destinationCity?: string;
-  deliveryAddress?: string;
   weight?: string;
   length?: string;
   width?: string;
   height?: string;
-  status?: string;
 };
 
 const parseNumberField = (value?: string): number | undefined => {
-  if (value === undefined || value.trim() === "") {
-    return undefined;
-  }
-
+  if (value === undefined || value.trim() === "") return undefined;
   const parsed = Number(value);
-
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
@@ -109,15 +97,11 @@ export const importPackagesFromCsv = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    if (!req.file) {
-      next(new BadRequestError("CSV file is required"));
-      return;
-    }
+    if (!req.file) return next(new BadRequestError("CSV file is required"));
 
     const csvContent = req.file.buffer.toString("utf-8");
 
     let rows: CsvPackageRow[];
-
     try {
       rows = parse(csvContent, {
         columns: true,
@@ -125,17 +109,19 @@ export const importPackagesFromCsv = async (
         trim: true,
       }) as CsvPackageRow[];
     } catch {
-      next(new BadRequestError("Invalid CSV file"));
-      return;
+      return next(new BadRequestError("Invalid CSV file"));
     }
 
     if (!Array.isArray(rows) || rows.length === 0) {
-      next(new BadRequestError("CSV file is empty"));
-      return;
+      return next(new BadRequestError("CSV file is empty"));
     }
 
     const createdPackages = [];
-    const failedPackages: CsvImportFailure[] = [];
+    const failedPackages: Array<{
+      rowNumber: number;
+      input: CsvPackageRow;
+      message: string;
+    }> = [];
 
     for (let index = 0; index < rows.length; index += 1) {
       const row = rows[index];
@@ -143,47 +129,36 @@ export const importPackagesFromCsv = async (
       const candidate = {
         senderName: row.senderName,
         recipientName: row.recipientName,
+        recipientEmail: row.recipientEmail,
+        recipientPhone: row.recipientPhone,
+        recipientAddress: row.recipientAddress,
         pickupCity: row.pickupCity,
         destinationCity: row.destinationCity,
-        deliveryAddress: row.deliveryAddress,
         weight: parseNumberField(row.weight),
         dimensions: {
           length: parseNumberField(row.length),
           width: parseNumberField(row.width),
           height: parseNumberField(row.height),
         },
-        ...(row.status ? { status: row.status } : {}),
       };
 
-      const validationResult = packageImportItemSchema.safeParse(candidate);
-
-      if (!validationResult.success) {
+      const result = packageImportItemSchema.safeParse(candidate);
+      if (!result.success) {
         failedPackages.push({
           rowNumber: index + 2,
           input: row,
-          message: validationResult.error.issues
-            .map((issue) => issue.message)
-            .join(", "),
+          message: result.error.issues.map((i) => i.message).join(", "),
         });
         continue;
       }
 
       try {
-        const createdPackage = await Package.create({
-          ...validationResult.data,
-          trackingNumber: generateTrackingNumber(),
-          status: validationResult.data.status || "registered",
-        });
-
-        createdPackages.push(createdPackage);
+        createdPackages.push(await Package.create(toPackageDoc(result.data)));
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to import package";
-
         failedPackages.push({
           rowNumber: index + 2,
           input: row,
-          message,
+          message: error instanceof Error ? error.message : "Failed to import package",
         });
       }
     }

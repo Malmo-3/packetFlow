@@ -1,5 +1,6 @@
-import { NextFunction, Request, Response } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import type { NextFunction, Request, Response } from "express";
+import jwt, { type JwtPayload } from "jsonwebtoken";
+import UnauthorizedError from "../errors/UnauthorizedError";
 
 type AuthTokenPayload = JwtPayload & {
   userId: string;
@@ -7,53 +8,42 @@ type AuthTokenPayload = JwtPayload & {
   role: string;
 };
 
+/**
+ * Require a valid Bearer JWT. Populates `req.user` on success.
+ * All failures are forwarded to the central error handler as a 401 — the raw
+ * error object is never serialised into the response.
+ */
 const authMiddleware = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ): void => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    next(new UnauthorizedError("Authorization header missing or malformed"));
+    return;
+  }
+
+  const token = authHeader.split(" ")[1];
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    // Misconfiguration, not a client error — surface as a 500 generic message.
+    next(new Error("JWT_SECRET is missing in environment variables"));
+    return;
+  }
+
   try {
-    const authHeader = req.headers.authorization; // reads the authorization header from the request. later client will send Authorization Bearer eyJhbGciOi...
-
-    if (!authHeader) {
-      res.status(401).json({
-        success: false,
-        message: "Authorization header is missing",
-      });
-      return;
-    }
-
-    if (!authHeader.startsWith("Bearer ")) { // chcks if the header has right format 
-      res.status(401).json({
-        success: false,
-        message: "Invalid authorization format",
-      });
-      return;
-    }
-
-    const token = authHeader.split(" ")[1]; // splits the string into 2 parts: bearer and actual token and takes the token part.
-
-    const jwtSecret = process.env.JWT_SECRET;
-
-    if (!jwtSecret) {
-      throw new Error("JWT_SECRET is missing in environment variables");
-    }
-
-    const decoded = jwt.verify(token, jwtSecret) as AuthTokenPayload; //   checks token was signed with ur secret, token has not expired, token is valid
-
+    const decoded = jwt.verify(token, jwtSecret) as AuthTokenPayload;
     req.user = {
       userId: decoded.userId,
       email: decoded.email,
       role: decoded.role,
     };
-
     next();
-  } catch (error) {
-    res.status(401).json({
-      success: false,
-      message: "Invalid or expired token",
-      error,
-    });
+  } catch {
+    next(new UnauthorizedError("Invalid or expired token"));
   }
 };
 

@@ -1,53 +1,88 @@
 import { Router } from "express";
-import authMiddleware from "../middleware/auth.middleware";
-import authorizeRoles from "../middleware/role.middleware";
-import validateRequest from "../middleware/validateRequest";
 import {
   assignDeliveriesToTrip,
   createTrip,
   deleteTrip,
   getAllTrips,
   getDeliveriesForTrip,
+  getMyTrips,
   getTripById,
+  optimizeTripStops,
   updateTrip,
+  updateTripStatus,
 } from "../controllers/trip.controller";
+import authMiddleware from "../middleware/auth.middleware";
+import { permit } from "../middleware/rbac";
+import validateRequest from "../middleware/validateRequest";
 import {
   assignDeliveriesToTripSchema,
   createTripSchema,
   tripIdParamSchema,
   updateTripSchema,
+  updateTripStatusSchema,
 } from "../schemas/trip.schemas";
 
 const tripRoute = Router();
 
-tripRoute.post("/", validateRequest({ body: createTripSchema }), createTrip);
-tripRoute.get("/", getAllTrips);
+// Carrier: own trips — must be registered before "/:id".
+tripRoute.get("/my", authMiddleware, permit("carrier"), getMyTrips);
+
+tripRoute.post(
+  "/",
+  authMiddleware,
+  permit("admin"),
+  validateRequest({ body: createTripSchema }),
+  createTrip,
+);
+tripRoute.get("/", authMiddleware, getAllTrips);
 tripRoute.get(
   "/:id",
+  authMiddleware,
   validateRequest({ params: tripIdParamSchema }),
   getTripById,
 );
 tripRoute.patch(
   "/:id",
+  authMiddleware,
+  permit("admin"),
   validateRequest({ params: tripIdParamSchema, body: updateTripSchema }),
   updateTrip,
 );
 tripRoute.delete(
   "/:id",
+  authMiddleware,
+  permit("admin"),
   validateRequest({ params: tripIdParamSchema }),
   deleteTrip,
 );
 
-tripRoute.get(
-  "/:id/deliveries",
-  validateRequest({ params: tripIdParamSchema }),
-  getDeliveriesForTrip,
+// Carrier: advance own trip status.
+tripRoute.patch(
+  "/:id/status",
+  authMiddleware,
+  permit("carrier"),
+  validateRequest({ params: tripIdParamSchema, body: updateTripStatusSchema }),
+  updateTripStatus,
 );
 
 tripRoute.patch(
+  "/:id/optimize",
+  authMiddleware,
+  permit("admin"),
+  validateRequest({ params: tripIdParamSchema }),
+  optimizeTripStops,
+);
+
+tripRoute.get(
   "/:id/deliveries",
   authMiddleware,
-  authorizeRoles("admin"),
+  validateRequest({ params: tripIdParamSchema }),
+  getDeliveriesForTrip,
+);
+tripRoute.patch(
+  "/:id/deliveries",
+  authMiddleware,
+  permit("admin"),
   validateRequest({
     params: tripIdParamSchema,
     body: assignDeliveriesToTripSchema,

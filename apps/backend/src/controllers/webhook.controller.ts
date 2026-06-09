@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import Webhook from "../models/webhook.model";
+import WebhookLog from "../models/webhookLog.model";
 import NotFoundError from "../errors/NotFoundError";
 import type {
   CreateWebhookInput,
@@ -7,31 +8,20 @@ import type {
   WebhookIdParams,
 } from "../schemas/webhook.schemas";
 
-// creates webhooks registration
 export const createWebhook = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const validatedBody = req.validatedBody as CreateWebhookInput;
-
-    const webhook = await Webhook.create({
-      ...validatedBody,
-      isActive: validatedBody.isActive ?? true,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Webhook created successfully",
-      data: webhook,
-    });
+    const body = req.validatedBody as CreateWebhookInput;
+    const webhook = await Webhook.create({ ...body, active: body.active ?? true });
+    res.status(201).json({ success: true, message: "Webhook created successfully", data: webhook });
   } catch (error) {
     next(error);
   }
 };
 
-// simple list endpoint
 export const getAllWebhooks = async (
   _req: Request,
   res: Response,
@@ -39,18 +29,29 @@ export const getAllWebhooks = async (
 ): Promise<void> => {
   try {
     const webhooks = await Webhook.find().sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: webhooks.length,
-      data: webhooks,
-    });
+    res.status(200).json({ success: true, count: webhooks.length, data: webhooks });
   } catch (error) {
     next(error);
   }
 };
 
-// gets one webhook by id 
+// GET /webhooks/logs — recent delivery attempts (newest first). Registered before "/:id".
+export const getWebhookLogs = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const logs = await WebhookLog.find()
+      .populate("webhook")
+      .sort({ createdAt: -1 })
+      .limit(100);
+    res.status(200).json({ success: true, count: logs.length, data: logs });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getWebhookById = async (
   req: Request,
   res: Response,
@@ -58,24 +59,14 @@ export const getWebhookById = async (
 ): Promise<void> => {
   try {
     const { id } = req.validatedParams as WebhookIdParams;
-
     const webhook = await Webhook.findById(id);
-
-    if (!webhook) {
-      next(new NotFoundError("Webhook not found"));
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      data: webhook,
-    });
+    if (!webhook) return next(new NotFoundError("Webhook not found"));
+    res.status(200).json({ success: true, data: webhook });
   } catch (error) {
     next(error);
   }
 };
 
-// allow partial updates.. 
 export const updateWebhook = async (
   req: Request,
   res: Response,
@@ -83,23 +74,13 @@ export const updateWebhook = async (
 ): Promise<void> => {
   try {
     const { id } = req.validatedParams as WebhookIdParams;
-    const validatedBody = req.validatedBody as UpdateWebhookInput;
-
-    const updatedWebhook = await Webhook.findByIdAndUpdate(id, validatedBody, {
+    const body = req.validatedBody as UpdateWebhookInput;
+    const updated = await Webhook.findByIdAndUpdate(id, body, {
       new: true,
       runValidators: true,
     });
-
-    if (!updatedWebhook) {
-      next(new NotFoundError("Webhook not found"));
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Webhook updated successfully",
-      data: updatedWebhook,
-    });
+    if (!updated) return next(new NotFoundError("Webhook not found"));
+    res.status(200).json({ success: true, message: "Webhook updated successfully", data: updated });
   } catch (error) {
     next(error);
   }
@@ -112,18 +93,9 @@ export const deleteWebhook = async (
 ): Promise<void> => {
   try {
     const { id } = req.validatedParams as WebhookIdParams;
-
-    const deletedWebhook = await Webhook.findByIdAndDelete(id);
-
-    if (!deletedWebhook) {
-      next(new NotFoundError("Webhook not found"));
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Webhook deleted successfully",
-    });
+    const deleted = await Webhook.findByIdAndDelete(id);
+    if (!deleted) return next(new NotFoundError("Webhook not found"));
+    res.status(200).json({ success: true, message: "Webhook deleted successfully" });
   } catch (error) {
     next(error);
   }

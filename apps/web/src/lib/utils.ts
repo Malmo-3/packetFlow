@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { PackageStatus } from "@packetflow/types";
+import type { Package, PackageStatus } from "@packetflow/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -19,4 +19,9 @@ export function progressForStatus(status: PackageStatus): number {
     case "delivered":        return 100;
     case "exception":        return 50;
   }
+}
+
+/** Returns the server-provided ETA for a package, or undefined if unavailable. */
+export function estimateDelivery(pkg: Package): string | undefined {
+  return pkg.estimatedDelivery ?? undefined;
 }

@@ -1,39 +1,54 @@
 import { z } from "zod";
+import { SKANE_CITIES, PACKAGE_STATUSES } from "../shared/skane";
 
 export const objectIdParamSchema = z.object({
   id: z.string().trim().length(24, "Invalid package ID"),
 });
 
-export const createPackageSchema = z.object({
-  senderName: z.string().trim().min(2, "Sender name must be at least 2 characters"),
-  recipientName: z.string().trim().min(2, "Recipient name must be at least 2 characters"),
-  pickupCity: z.string().trim().min(2, "Pickup city must be at least 2 characters"),
-  destinationCity: z.string().trim().min(2, "Destination city must be at least 2 characters"),
-  deliveryAddress: z.string().trim().min(5, "Delivery address must be at least 5 characters"),
-  weight: z.number().positive("Weight must be greater than 0"),
-  dimensions: z.object({
-    length: z.number().positive("Length must be greater than 0"),
-    width: z.number().positive("Width must be greater than 0"),
-    height: z.number().positive("Height must be greater than 0"),
-  }),
-  status: z.enum(["registered", "assigned", "in_transit", "delivered"]).optional(),
-  delivery: z.string().trim().length(24, "Invalid delivery ID").optional(),
+const skaneCity = z.enum(SKANE_CITIES, {
+  message: "Must be a valid Skåne municipality",
 });
 
+const dimensionsSchema = z.object({
+  length: z.number().positive("Length must be greater than 0"),
+  width: z.number().positive("Width must be greater than 0"),
+  height: z.number().positive("Height must be greater than 0"),
+});
+
+/**
+ * Create-package body. `dropOffPoint`, `pickUpPoint`, `trackingNumber`,
+ * `senderId` and `status` are all resolved server-side and never accepted here.
+ */
+export const createPackageSchema = z.object({
+  senderName: z.string().trim().min(2, "Sender name must be at least 2 characters"),
+  recipientName: z
+    .string()
+    .trim()
+    .min(2, "Recipient name must be at least 2 characters"),
+  recipientEmail: z.string().trim().toLowerCase().email("Invalid recipient email"),
+  recipientPhone: z.string().trim().optional(),
+  recipientAddress: z.string().trim().optional(),
+  pickupCity: skaneCity,
+  destinationCity: skaneCity,
+  weight: z.number().positive("Weight must be greater than 0"),
+  dimensions: dimensionsSchema,
+});
+
+/**
+ * Update-package body. Admins may change any field; carriers may only advance
+ * `status` (enforced in the controller). Cities are still Skåne-validated.
+ */
 export const updatePackageSchema = z.object({
-  senderName: z.string().trim().min(2, "Sender name must be at least 2 characters").optional(),
-  recipientName: z.string().trim().min(2, "Recipient name must be at least 2 characters").optional(),
-  pickupCity: z.string().trim().min(2, "Pickup city must be at least 2 characters").optional(),
-  destinationCity: z.string().trim().min(2, "Destination city must be at least 2 characters").optional(),
-  deliveryAddress: z.string().trim().min(5, "Delivery address must be at least 5 characters").optional(),
-  weight: z.number().positive("Weight must be greater than 0").optional(),
-  dimensions: z.object({
-    length: z.number().positive("Length must be greater than 0").optional(),
-    width: z.number().positive("Width must be greater than 0").optional(),
-    height: z.number().positive("Height must be greater than 0").optional(),
-  }).optional(),
-  status: z.enum(["registered", "assigned", "in_transit", "delivered"]).optional(),
-  delivery: z.string().trim().length(24, "Invalid delivery ID").optional(),
+  senderName: z.string().trim().min(2).optional(),
+  recipientName: z.string().trim().min(2).optional(),
+  recipientEmail: z.string().trim().toLowerCase().email().optional(),
+  recipientPhone: z.string().trim().optional(),
+  recipientAddress: z.string().trim().optional(),
+  pickupCity: skaneCity.optional(),
+  destinationCity: skaneCity.optional(),
+  weight: z.number().positive().optional(),
+  dimensions: dimensionsSchema.partial().optional(),
+  status: z.enum(PACKAGE_STATUSES).optional(),
 });
 
 export type CreatePackageInput = z.infer<typeof createPackageSchema>;

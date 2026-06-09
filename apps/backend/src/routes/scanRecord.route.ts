@@ -5,6 +5,8 @@ import {
   getScanHistoryForPackage,
   getScanRecordById,
 } from "../controllers/scanRecord.controller";
+import authMiddleware from "../middleware/auth.middleware";
+import { permit } from "../middleware/rbac";
 import validateRequest from "../middleware/validateRequest";
 import {
   createScanRecordSchema,
@@ -14,28 +16,28 @@ import {
 
 const scanRecordRoute = Router();
 
-// POST /api/v1/scans crates a scan record.
-scanRecordRoute.post(
-  "/",
-  validateRequest({ body: createScanRecordSchema }),
-  createScanRecord,
-);
+scanRecordRoute.use(authMiddleware);
 
-// GET /api/v1/scans return all scan record. 
-scanRecordRoute.get("/", getAllScanRecords);
-
-// GET /api/v1/scans/:id return one scan record by id: 
-scanRecordRoute.get(
-  "/:id",
-  validateRequest({ params: scanRecordIdParamSchema }),
-  getScanRecordById,
-);
-
-// GET /api/v1/scans/package/:packageId returns packege and its full scan history
+// Package-scoped history: any authenticated user (recipients see their timeline).
 scanRecordRoute.get(
   "/package/:packageId",
   validateRequest({ params: packageIdParamSchema }),
   getScanHistoryForPackage,
+);
+
+// Creating scans and browsing the full scan log is admin/carrier only.
+scanRecordRoute.post(
+  "/",
+  permit("admin", "carrier"),
+  validateRequest({ body: createScanRecordSchema }),
+  createScanRecord,
+);
+scanRecordRoute.get("/", permit("admin", "carrier"), getAllScanRecords);
+scanRecordRoute.get(
+  "/:id",
+  permit("admin", "carrier"),
+  validateRequest({ params: scanRecordIdParamSchema }),
+  getScanRecordById,
 );
 
 export default scanRecordRoute;

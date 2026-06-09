@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { defaultRouteForRole, useAuth } from "@/lib/auth";
+import { submitCarrierApplication } from "@/api/carrierApplications";
 import { toast } from "@/hooks/use-toast";
 
 export default function WorkWithUs() {
-  const { user, register } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,23 +34,26 @@ export default function WorkWithUs() {
     }
     if (!phone.trim())   { setError("Enter a phone number."); return; }
     if (!vehicle.trim()) { setError("Describe your vehicle or fleet unit."); return; }
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
     if (password !== confirm) { setError("Passwords do not match."); return; }
 
     setSubmitting(true);
     try {
-      await register({
-        name: name.trim(),
+      await submitCarrierApplication({
+        fullName: name.trim(),
         email: email.trim(),
         password,
-        role: "carrier",
         phone: phone.trim(),
+        vehicle: vehicle.trim(),
         address: address.trim() || undefined,
       });
-      toast({ title: "Welcome aboard", description: "You are signed in as a carrier." });
-      navigate(defaultRouteForRole("carrier"));
+      toast({
+        title: "Application submitted",
+        description: "An admin will review your application. You'll be able to sign in once approved.",
+      });
+      navigate("/login");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed.");
+      setError(err instanceof Error ? err.message : "Application failed.");
     } finally {
       setSubmitting(false);
     }
@@ -77,7 +81,7 @@ export default function WorkWithUs() {
                 <Route className="h-4 w-4 text-foreground" />
               </span>
               <span>
-                <span className="font-medium text-foreground">Routes</span> — carriers use Packages and Routes in the console.
+                <span className="font-medium text-foreground">Trips</span> — carriers use Packages and Trips in the console.
               </span>
             </li>
             <li className="flex gap-3">
@@ -133,7 +137,7 @@ export default function WorkWithUs() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full rounded-full" disabled={submitting}>
-              {submitting ? "Applying..." : "Apply & sign in"}
+              {submitting ? "Submitting..." : "Submit application"}
             </Button>
           </form>
         </Card>

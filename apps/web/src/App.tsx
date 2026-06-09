@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,8 +15,8 @@ import SignUp from "./pages/SignUp";
 import WorkWithUs from "./pages/WorkWithUs";
 
 import SenderDashboard from "./pages/sender/SenderDashboard";
-import SenderCreatePackage from "./pages/sender/SenderCreatePackage";
-import SenderShipments from "./pages/sender/SenderShipments";
+import SenderCreatePackage from "./features/packages/SenderCreatePackage";
+import SenderShipments from "./features/packages/SenderShipments";
 import PackageDetail from "./pages/PackageDetail";
 
 import RecipientDashboard from "./pages/recipient/RecipientDashboard";
@@ -25,12 +25,13 @@ import RecipientTrackResult from "./pages/recipient/RecipientTrackResult";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
-import AdminRoutes from "./pages/admin/AdminRoutes";
-import AdminPackages from "./pages/admin/AdminPackages";
+import AdminTrips from "./pages/admin/AdminTrips";
+import AdminPackages from "./features/packages/AdminPackages";
 import AdminWebhooks from "./pages/admin/AdminWebhooks";
+import AdminApplications from "./pages/admin/AdminApplications";
 
-import CarrierPackages from "./pages/carrier/CarrierPackages";
-import CarrierRoutes from "./pages/carrier/CarrierRoutes";
+import CarrierPackages from "./features/packages/CarrierPackages";
+import CarrierTrips from "./pages/carrier/CarrierTrips";
 import NotificationsPage from "./pages/Notifications";
 
 const queryClient = new QueryClient();
@@ -71,13 +72,18 @@ const App = () => (
             {/* Admin only */}
             <Route path="/admin" element={shell(["admin"], <AdminDashboard />)} />
             <Route path="/admin/users" element={shell(["admin"], <AdminUsers />)} />
-            <Route path="/admin/routes" element={shell(["admin"], <AdminRoutes />)} />
+            <Route path="/admin/trips" element={shell(["admin"], <AdminTrips />)} />
+            {/* Back-compat: old /admin/routes URL redirects to /admin/trips */}
+            <Route path="/admin/routes" element={<Navigate to="/admin/trips" replace />} />
             <Route path="/admin/packages" element={shell(["admin"], <AdminPackages />)} />
             <Route path="/admin/webhooks" element={shell(["admin"], <AdminWebhooks />)} />
+            <Route path="/admin/applications" element={shell(["admin"], <AdminApplications />)} />
 
             {/* Carrier — own namespace, no overlap with /admin */}
             <Route path="/carrier/packages" element={shell(["carrier"], <CarrierPackages />)} />
-            <Route path="/carrier/routes" element={shell(["carrier"], <CarrierRoutes />)} />
+            <Route path="/carrier/trips" element={shell(["carrier"], <CarrierTrips />)} />
+            {/* Back-compat: old /carrier/routes URL redirects to /carrier/trips */}
+            <Route path="/carrier/routes" element={<Navigate to="/carrier/trips" replace />} />
 
             {/* Notifications — accessible to all authenticated roles */}
             <Route path="/notifications" element={shell(["sender", "recipient", "carrier", "admin"], <NotificationsPage />)} />

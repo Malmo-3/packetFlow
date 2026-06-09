@@ -4,7 +4,7 @@ import { Search, StarOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { usePackages } from "@/api/hooks/usePackages";
+import { usePackages } from "@/features/packages/usePackages";
 import { listSavedTracking, removeTrackingCode } from "@/api/savedTracking";
 
 export default function RecipientDashboard() {

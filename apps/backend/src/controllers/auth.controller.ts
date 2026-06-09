@@ -1,11 +1,17 @@
-import { NextFunction, Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import User from "../models/user.model";
-import type { LoginInput, RegisterInput } from "../schemas/auth.schemas"; 
+import type { LoginInput, RegisterInput } from "../schemas/auth.schemas";
 import ConflictError from "../errors/ConflictError";
 import UnauthorizedError from "../errors/UnauthorizedError";
 
+/**
+ * POST /auth/register
+ *
+ * SECURITY: the role is taken from the validated body, which can only be
+ * sender / recipient / carrier (see auth.schemas). `admin` is impossible here.
+ */
 export const registerUser = async (
   req: Request,
   res: Response,
@@ -16,13 +22,8 @@ export const registerUser = async (
       req.validatedBody as RegisterInput;
 
     const existingUser = await User.findOne({ email });
-
     if (existingUser) {
       next(new ConflictError("User already exists with this email"));
-      // res.status(409).json({
-      //   success: false,
-      //   message: "User already exists with this email",
-      // });
       return;
     }
 
@@ -47,14 +48,10 @@ export const registerUser = async (
     });
   } catch (error) {
     next(error);
-    // res.status(500).json({
-    //   success: false,
-    //   message: "Failed to register user",
-    //   error,
-    // });
   }
 };
 
+/** POST /auth/login */
 export const loginUser = async (
   req: Request,
   res: Response,
@@ -64,45 +61,29 @@ export const loginUser = async (
     const { email, password } = req.validatedBody as LoginInput;
 
     const user = await User.findOne({ email });
-
     if (!user) {
       next(new UnauthorizedError("Invalid email or password"));
-      // res.status(401).json({
-      //   success: false,
-      //   message: "Invalid email or password",
-      // });
       return;
     }
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
-
     if (!isPasswordMatch) {
       next(new UnauthorizedError("Invalid email or password"));
-      // res.status(401).json({
-      //   success: false,
-      //   message: "Invalid email or password",
-      // });
       return;
     }
 
     const jwtSecret = process.env.JWT_SECRET;
-
     if (!jwtSecret) {
       throw new Error("JWT_SECRET is missing in environment variables");
     }
 
     const signOptions: SignOptions = {
-      // settings object for the jwt token..
       expiresIn: (process.env.JWT_EXPIRES_IN ||
-        "1d") as SignOptions["expiresIn"],
+        "7d") as SignOptions["expiresIn"],
     };
 
     const token = jwt.sign(
-      {
-        userId: user._id.toString(),
-        email: user.email,
-        role: user.role,
-      },
+      { userId: user._id.toString(), email: user.email, role: user.role },
       jwtSecret,
       signOptions,
     );
@@ -120,15 +101,10 @@ export const loginUser = async (
     });
   } catch (error) {
     next(error);
-    // res.status(500).json({
-    //   success: false,
-    //   message: "Failed to login user",
-    //   error,
-    // });
   }
 };
 
-// protected controller action
+/** GET /auth/me — returns the decoded session (JWT payload). */
 export const getMe = async (
   req: Request,
   res: Response,
@@ -137,10 +113,6 @@ export const getMe = async (
   try {
     if (!req.user) {
       next(new UnauthorizedError("User not authenticated"));
-      // res.status(401).json({
-      //   success: false,
-      //   message: "User not authenticated",
-      // });
       return;
     }
 
@@ -151,37 +123,5 @@ export const getMe = async (
     });
   } catch (error) {
     next(error);
-    // res.status(500).json({
-    //   success: false,
-    //   message: "Failed to fetch authenticated user",
-    //   error,
-    // });
-  }
-};
-
-//Admin only controller
-export const adminOnlyTest = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    if (!req.user) {
-      next(new UnauthorizedError("User not authenticated"));
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Welcome admin, you have access to this route",
-      data: req.user,
-    });
-  } catch (error) {
-    next(error);
-    // res.status(500).json({
-    //   success: false,
-    //   message: "Failed to access admin route",
-    //   error,
-    // });
   }
 };

@@ -1,52 +1,29 @@
 import { Schema, model } from "mongoose";
+import type { PackageStatus } from "../shared/skane";
+import { PACKAGE_STATUSES } from "../shared/skane";
 
-export type WebhookEvent =
-  | "package.status_changed"
-  | "delivery.status_changed"
-  | "scan.created";
+/** A webhook subscribes to a package status (or "all" statuses). */
+export type WebhookEvent = PackageStatus | "all";
 
 export interface IWebhook {
-  name: string;
+  name?: string;
   url: string;
   event: WebhookEvent;
-  secret?: string;
-  isActive: boolean;
+  active: boolean;
 }
 
 const webhookSchema = new Schema<IWebhook>(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    url: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    name: { type: String, required: false, trim: true },
+    url: { type: String, required: true, trim: true },
     event: {
       type: String,
-      enum: [
-        "package.status_changed",
-        "delivery.status_changed",
-        "scan.created",
-      ],
+      enum: [...PACKAGE_STATUSES, "all"],
       required: true,
     },
-    secret: {
-      type: String,
-      required: false,
-      trim: true,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
+    active: { type: Boolean, default: true },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
 const Webhook = model<IWebhook>("Webhook", webhookSchema);

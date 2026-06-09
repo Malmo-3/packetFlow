@@ -1,18 +1,43 @@
 import { useEffect, useState } from "react";
+import { Loader2, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { listUsers } from "@/api/users";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { listUsers, deleteUser } from "@/api/users";
+import { useAuth } from "@/lib/auth";
+import { toast } from "@/hooks/use-toast";
 import type { Role, User } from "@packetflow/types";
 
 const ROLES: Array<Role | "all"> = ["all", "admin", "carrier", "sender", "recipient"];
 
 export default function AdminUsers() {
+  const { user: currentUser } = useAuth();
   const [filter, setFilter] = useState<Role | "all">("all");
   const [users, setUsers] = useState<User[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
 
   // TODO: replace with a useQuery hook once the API endpoint is live
   useEffect(() => {
     listUsers().then(setUsers).catch(() => {});
   }, []);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeletingId(target.id);
+    try {
+      await deleteUser(target.id);
+      setUsers((prev) => prev.filter((u) => u.id !== target.id));
+      toast({ title: "User deleted" });
+      setDeleteTarget(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete user";
+      toast({ title: message, variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filtered = filter === "all" ? users : users.filter((u) => u.role === filter);
 
@@ -47,12 +72,13 @@ export default function AdminUsers() {
               <th className="px-4 py-3 text-left">Email</th>
               <th className="px-4 py-3 text-left">Role</th>
               <th className="px-4 py-3 text-left">Created</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                   No users found.
                 </td>
               </tr>
@@ -70,11 +96,46 @@ export default function AdminUsers() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{new Date(user.createdAt).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-right">
+                  {currentUser?.id === user.id ? (
+                    <span className="text-xs text-muted-foreground">You</span>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-xs text-destructive hover:text-destructive"
+                      onClick={() => setDeleteTarget(user)}
+                      disabled={deletingId === user.id}
+                    >
+                      {deletingId === user.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                      Delete
+                    </Button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete user?"
+        description={
+          deleteTarget
+            ? `${deleteTarget.name} (${deleteTarget.email}) will be permanently removed. This cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Delete user"
+        destructive
+        pending={deletingId !== null}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

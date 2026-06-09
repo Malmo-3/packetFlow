@@ -3,14 +3,15 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, MapPin, Package as PackageIcon, RefreshCw, Star, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Logo } from "@/components/Logo";
+import { TrackingMap } from "@/components/TrackingMap";
 import { useAuth } from "@/lib/auth";
-import { estimateDelivery } from "@/lib/tracking";
-import { progressForStatus } from "@/lib/utils";
-import { usePackageByCode } from "@/api/hooks/usePackages";
+import { estimateDelivery, progressForStatus } from "@/lib/utils";
+import { usePackageByCode } from "@/features/packages/usePackages";
 import { listScansForPackage } from "@/api/scans";
 import { listSavedTracking, removeTrackingCode, saveTrackingCode } from "@/api/savedTracking";
-import { ScanTimeline } from "@/components/ScanTimeline";
-import { StatusBadge } from "@/components/StatusBadge";
+import { ScanTimeline } from "@/features/packages/ScanTimeline";
+import { StatusBadge } from "@/features/packages/StatusBadge";
 import { toast } from "@/hooks/use-toast";
 import type { Scan } from "@packetflow/types";
 
@@ -81,8 +82,7 @@ export default function RecipientTrackResult() {
       {/* Minimal top nav for public page */}
       <div className="border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-6 py-4 md:px-10">
-          <PackageIcon className="h-5 w-5 text-foreground" strokeWidth={2.5} />
-          <span className="text-lg font-bold">PacketFlow</span>
+          <Logo className="h-7 w-auto" />
         </div>
       </div>
 
@@ -151,6 +151,21 @@ export default function RecipientTrackResult() {
                   style={{ width: `${progress}%` }}
                 />
               </div>
+            </Card>
+
+            <Card className="border-border bg-card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-bold">Live map</h2>
+                <span className="text-sm text-muted-foreground">
+                  {pkg.pickupCity} → {pkg.destinationCity}
+                </span>
+              </div>
+              <TrackingMap
+                pickupCity={pkg.pickupCity}
+                destinationCity={pkg.destinationCity}
+                scans={scans}
+                status={pkg.status}
+              />
             </Card>
 
             <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">

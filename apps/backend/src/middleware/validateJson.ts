@@ -1,28 +1,34 @@
-//? this middleware checks:
-//? iff request method is POST, Put or PATCH
-//? then the request must have Content-Type: application/json
-
-//? why is it useful? later the API will accept JSON bodies, - this protect the bakend from wrong content types,
+/**
+ * Guards against wrong content types on write requests that actually carry a body.
+ *
+ * Important: several endpoints are intentionally body-less (e.g. the carrier
+ * `POST /packages/:id/arrive` and `PATCH /notifications/read-all`). The client
+ * does not set a Content-Type on those, so we must only enforce
+ * `application/json` when a request body is genuinely present — otherwise we'd
+ * reject legitimate, body-less calls with a 415.
+ */
 
 import type { NextFunction, Request, Response } from "express";
+
+const methodsToCheck = new Set(["POST", "PUT", "PATCH"]);
 
 const validateJson = (
   req: Request,
   res: Response,
   next: NextFunction,
 ): void => {
-  const methodsToCheck = new Set(["POST", "PUT", "PATCH"]);
-
   if (!methodsToCheck.has(req.method)) {
     next();
     return;
   }
 
-  const isCsvUploadRoute =
-    req.method === "POST" &&
-    req.originalUrl.startsWith("/api/v1/import/packages/csv");
+  // No body → nothing to validate.
+  const contentLength = req.headers["content-length"];
+  const hasBody =
+    (contentLength !== undefined && Number(contentLength) > 0) ||
+    req.headers["transfer-encoding"] !== undefined;
 
-  if (isCsvUploadRoute && req.is("multipart/form-data")) {
+  if (!hasBody) {
     next();
     return;
   }

@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { useCreatePackage } from "@/api/hooks/usePackages";
+import { useCreatePackage } from "@/features/packages/usePackages";
 import { toast } from "@/hooks/use-toast";
 
 interface CsvRow {

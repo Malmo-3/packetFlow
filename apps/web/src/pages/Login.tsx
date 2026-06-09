@@ -4,6 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/Logo";
 import { defaultRouteForRole, useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 
@@ -51,8 +52,8 @@ export default function Login() {
 
       {/* ── Left: marketing panel ── */}
       <div className="hidden flex-col justify-between bg-foreground p-12 text-background lg:flex lg:w-1/2">
-        {/* Logo always uses dark variant on the black panel */}
-        <img src="/logo-dark.svg" alt="PacketFlow" width="146" height="42" className="h-10 w-auto" />
+        {/* Logo follows the panel's foreground colour (text-background) */}
+        <Logo className="h-10 w-auto text-background" />
 
         {/* Hero copy */}
         <div>
@@ -86,13 +87,7 @@ export default function Login() {
 
           {/* Mobile-only logo */}
           <div className="mb-8 lg:hidden">
-            <img
-              src={theme === "dark" ? "/logo-dark.svg" : "/logo.svg"}
-              alt="PacketFlow"
-              width="146"
-              height="42"
-              className="h-9 w-auto"
-            />
+            <Logo className="h-9 w-auto" />
           </div>
 
           {/* Auth form card — ex-auth-form-card */}

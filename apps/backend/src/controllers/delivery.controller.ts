@@ -1,28 +1,29 @@
+/**
+ * Delivery controller.
+ *
+ * Responses are returned RAW to match @packetflow/backend-client → deliveries.ts.
+ * All write operations are admin-only (enforced on the routes).
+ */
+
 import type { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import { Delivery } from "../models/delivery.model";
 import Package from "../models/package.model";
 import Trip from "../models/trip.model";
-import ConflictError from "../errors/ConflictError";
 import NotFoundError from "../errors/NotFoundError";
+import ConflictError from "../errors/ConflictError";
 import type {
-  AssignManyDeliveriesToTripInput,
   AssignTripToDeliveryInput,
   CreateDeliveryInput,
   DeliveryIdParams,
   UpdateDeliveryInput,
 } from "../schemas/delivery.schemas";
 
-const isMongoDuplicateKeyError = (
-  error: unknown,
-): error is { code: number } => {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === 11000
-  );
-};
+const isMongoDuplicateKeyError = (error: unknown): error is { code: number } =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  (error as { code: unknown }).code === 11000;
 
 export const createDelivery = async (
   req: Request,
@@ -30,28 +31,17 @@ export const createDelivery = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { packageId, trip, status } =
-      req.validatedBody as CreateDeliveryInput;
+    const { packageId, trip, status } = req.validatedBody as CreateDeliveryInput;
 
     const pkg = await Package.findById(packageId);
-
-    if (!pkg) {
-      next(new NotFoundError("Package not found"));
-      return;
-    }
-
+    if (!pkg) return next(new NotFoundError("Package not found"));
     if (pkg.delivery) {
-      next(new ConflictError("Package already has a delivery assigned"));
-      return;
+      return next(new ConflictError("Package already has a delivery assigned"));
     }
 
     if (trip) {
       const existingTrip = await Trip.findById(trip);
-
-      if (!existingTrip) {
-        next(new NotFoundError("Assigned trip not found"));
-        return;
-      }
+      if (!existingTrip) return next(new NotFoundError("Assigned trip not found"));
     }
 
     const delivery = await Delivery.create({
@@ -59,9 +49,10 @@ export const createDelivery = async (
       trackingNumber: pkg.trackingNumber,
       senderName: pkg.senderName,
       recipientName: pkg.recipientName,
+      recipientEmail: pkg.recipientEmail,
       pickupCity: pkg.pickupCity,
       destinationCity: pkg.destinationCity,
-      deliveryAddress: pkg.deliveryAddress,
+      dropOffPoint: pkg.dropOffPoint,
       trip,
       status: trip ? "assigned" : status || "pending",
     });
@@ -71,28 +62,15 @@ export const createDelivery = async (
       status: "assigned",
     });
 
-    const populatedDelivery = await delivery.populate(["package", "trip"]);
-
-    res.status(201).json({
-      success: true,
-      message: "Delivery created successfully",
-      data: populatedDelivery,
-    });
+    const populated = await delivery.populate(["package", "trip"]);
+    res.status(201).json(populated);
   } catch (error) {
-    if (error instanceof mongoose.Error.ValidationError) {
-      next(error);
-      return;
-    }
-
+    if (error instanceof mongoose.Error.ValidationError) return next(error);
     if (isMongoDuplicateKeyError(error)) {
-      next(
-        new ConflictError(
-          "A delivery with this tracking number already exists",
-        ),
+      return next(
+        new ConflictError("A delivery with this tracking number already exists"),
       );
-      return;
     }
-
     next(error);
   }
 };
@@ -105,18 +83,29 @@ export const getAllDeliveries = async (
   try {
     const tripId =
       typeof req.query.tripId === "string" ? req.query.tripId : undefined;
-
     const filter = tripId ? { trip: tripId } : {};
 
     const deliveries = await Delivery.find(filter)
       .populate("trip")
       .sort({ createdAt: -1 });
+    res.status(200).json(deliveries);
+  } catch (error) {
+    next(error);
+  }
+};
 
-    res.status(200).json({
-      success: true,
-      count: deliveries.length,
-      data: deliveries,
-    });
+// NOTE: registered before "/:id" so it isn't captured as a param.
+export const getUnassignedDeliveries = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const deliveries = await Delivery.find({
+      $or: [{ trip: { $exists: false } }, { trip: null }],
+      status: "pending",
+    }).sort({ createdAt: -1 });
+    res.status(200).json(deliveries);
   } catch (error) {
     next(error);
   }
@@ -129,18 +118,9 @@ export const getDeliveryById = async (
 ): Promise<void> => {
   try {
     const { id } = req.validatedParams as DeliveryIdParams;
-
     const delivery = await Delivery.findById(id).populate("trip");
-
-    if (!delivery) {
-      next(new NotFoundError("Delivery not found"));
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      data: delivery,
-    });
+    if (!delivery) return next(new NotFoundError("Delivery not found"));
+    res.status(200).json(delivery);
   } catch (error) {
     next(error);
   }
@@ -153,36 +133,20 @@ export const updateDelivery = async (
 ): Promise<void> => {
   try {
     const { id } = req.validatedParams as DeliveryIdParams;
-    const validatedBody = req.validatedBody as UpdateDeliveryInput;
+    const body = req.validatedBody as UpdateDeliveryInput;
 
-    if (validatedBody.trip) {
-      const tripExists = await Trip.findById(validatedBody.trip);
-
-      if (!tripExists) {
-        next(new NotFoundError("Trip not found"));
-        return;
-      }
+    if (body.trip) {
+      const tripExists = await Trip.findById(body.trip);
+      if (!tripExists) return next(new NotFoundError("Trip not found"));
     }
 
-    const updatedDelivery = await Delivery.findByIdAndUpdate(
-      id,
-      validatedBody,
-      {
-        new: true,
-        runValidators: true,
-      },
-    ).populate("trip");
+    const updatedDelivery = await Delivery.findByIdAndUpdate(id, body, {
+      new: true,
+      runValidators: true,
+    }).populate("trip");
 
-    if (!updatedDelivery) {
-      next(new NotFoundError("Delivery not found"));
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Delivery updated successfully",
-      data: updatedDelivery,
-    });
+    if (!updatedDelivery) return next(new NotFoundError("Delivery not found"));
+    res.status(200).json(updatedDelivery);
   } catch (error) {
     next(error);
   }
@@ -195,28 +159,21 @@ export const deleteDelivery = async (
 ): Promise<void> => {
   try {
     const { id } = req.validatedParams as DeliveryIdParams;
-
     const deletedDelivery = await Delivery.findByIdAndDelete(id);
-
-    if (!deletedDelivery) {
-      next(new NotFoundError("Delivery not found"));
-      return;
-    }
+    if (!deletedDelivery) return next(new NotFoundError("Delivery not found"));
 
     await Package.findByIdAndUpdate(deletedDelivery.package, {
       $unset: { delivery: 1 },
       $set: { status: "registered" },
     });
 
-    res.status(200).json({
-      success: true,
-      message: "Delivery deleted successfully",
-    });
+    res.status(200).json({ message: "Delivery deleted successfully" });
   } catch (error) {
     next(error);
   }
 };
 
+// PATCH /deliveries/:id/assign-trip
 export const assignTripToDelivery = async (
   req: Request,
   res: Response,
@@ -227,94 +184,16 @@ export const assignTripToDelivery = async (
     const { tripId } = req.validatedBody as AssignTripToDeliveryInput;
 
     const trip = await Trip.findById(tripId);
-
-    if (!trip) {
-      next(new NotFoundError("Trip not found"));
-      return;
-    }
+    if (!trip) return next(new NotFoundError("Trip not found"));
 
     const updatedDelivery = await Delivery.findByIdAndUpdate(
       id,
-      {
-        trip: tripId,
-        status: "assigned",
-      },
-      {
-        new: true,
-        runValidators: true,
-      },
+      { trip: tripId, status: "assigned" },
+      { new: true, runValidators: true },
     ).populate("trip");
 
-    if (!updatedDelivery) {
-      next(new NotFoundError("Delivery not found"));
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Trip assigned to delivery successfully",
-      data: updatedDelivery,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const assignManyDeliveriesToTrip = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const { tripId, deliveryIds } =
-      req.validatedBody as AssignManyDeliveriesToTripInput;
-
-    const trip = await Trip.findById(tripId);
-
-    if (!trip) {
-      next(new NotFoundError("Trip not found"));
-      return;
-    }
-
-    const result = await Delivery.updateMany(
-      { _id: { $in: deliveryIds } },
-      {
-        $set: {
-          trip: tripId,
-          status: "assigned",
-        },
-      },
-    );
-
-    res.status(200).json({
-      success: true,
-      message: "Deliveries assigned to trip successfully",
-      data: {
-        matchedCount: result.matchedCount,
-        modifiedCount: result.modifiedCount,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getUnassignedDeliveries = async (
-  _req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const deliveries = await Delivery.find({
-      $or: [{ trip: { $exists: false } }, { trip: null }],
-      status: "pending",
-    }).sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: deliveries.length,
-      data: deliveries,
-    });
+    if (!updatedDelivery) return next(new NotFoundError("Delivery not found"));
+    res.status(200).json(updatedDelivery);
   } catch (error) {
     next(error);
   }

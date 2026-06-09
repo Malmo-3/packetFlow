@@ -1,13 +1,16 @@
-//* Defines the endpoints for package operation..
-
 import { Router } from "express";
 import {
+  arriveAtDropOff,
   createPackage,
+  deletePackageById,
   getAllPackages,
   getPackageById,
+  markPickedUp,
   updatePackageById,
-  deletePackageById,
 } from "../controllers/package.controller";
+import authMiddleware from "../middleware/auth.middleware";
+import optionalAuth from "../middleware/optionalAuth.middleware";
+import { permit } from "../middleware/rbac";
 import validateRequest from "../middleware/validateRequest";
 import {
   createPackageSchema,
@@ -15,18 +18,57 @@ import {
   updatePackageSchema,
 } from "../schemas/package.schemas";
 
-const packageRoute = Router(); 
+const packageRoute = Router();
 
-// packageRoute.post("/", createPackage); 
-// packageRoute.get("/", getAllPackages); 
-// packageRoute.get("/:id", getPackageById); 
-// packageRoute.patch("/:id", updatePackageById); 
-// packageRoute.delete("/:id", deletePackageById); 
+// Public intake (optionalAuth stamps senderId when a sender is logged in).
+packageRoute.post(
+  "/",
+  optionalAuth,
+  validateRequest({ body: createPackageSchema }),
+  createPackage,
+);
 
-packageRoute.post("/", validateRequest({ body: createPackageSchema }), createPackage);
-packageRoute.get("/", getAllPackages);
-packageRoute.get("/:id", validateRequest({ params: objectIdParamSchema }), getPackageById);
-packageRoute.patch("/:id",validateRequest({ params: objectIdParamSchema, body: updatePackageSchema }), updatePackageById);
-packageRoute.delete("/:id", validateRequest({ params: objectIdParamSchema }), deletePackageById);
+// Authenticated reads — results scoped by role in the controller.
+packageRoute.get("/", authMiddleware, getAllPackages);
+packageRoute.get(
+  "/:id",
+  authMiddleware,
+  validateRequest({ params: objectIdParamSchema }),
+  getPackageById,
+);
+
+// Admin (any field) or carrier (status only, forward-only).
+packageRoute.patch(
+  "/:id",
+  authMiddleware,
+  permit("admin", "carrier"),
+  validateRequest({ params: objectIdParamSchema, body: updatePackageSchema }),
+  updatePackageById,
+);
+
+// Admin only.
+packageRoute.delete(
+  "/:id",
+  authMiddleware,
+  permit("admin"),
+  validateRequest({ params: objectIdParamSchema }),
+  deletePackageById,
+);
+
+// Carrier transitions.
+packageRoute.post(
+  "/:id/arrive",
+  authMiddleware,
+  permit("carrier"),
+  validateRequest({ params: objectIdParamSchema }),
+  arriveAtDropOff,
+);
+packageRoute.post(
+  "/:id/pickup",
+  authMiddleware,
+  permit("carrier"),
+  validateRequest({ params: objectIdParamSchema }),
+  markPickedUp,
+);
 
 export default packageRoute;

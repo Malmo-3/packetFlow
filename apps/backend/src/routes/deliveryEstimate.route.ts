@@ -7,6 +7,8 @@ import {
   getDeliveryEstimateByPackage,
   updateDeliveryEstimate,
 } from "../controllers/deliveryEstimate.controller";
+import authMiddleware from "../middleware/auth.middleware";
+import { permit } from "../middleware/rbac";
 import validateRequest from "../middleware/validateRequest";
 import {
   createDeliveryEstimateSchema,
@@ -17,37 +19,40 @@ import {
 
 const deliveryEstimateRoute = Router();
 
-deliveryEstimateRoute.post(
-  "/",
-  validateRequest({ body: createDeliveryEstimateSchema }),
-  createDeliveryEstimate,
-);
+deliveryEstimateRoute.use(authMiddleware);
 
+// Reads: any authenticated user.
 deliveryEstimateRoute.get("/", getAllDeliveryEstimates);
-
+deliveryEstimateRoute.get(
+  "/package/:packageId",
+  validateRequest({ params: packageIdParamSchema }),
+  getDeliveryEstimateByPackage,
+);
 deliveryEstimateRoute.get(
   "/:id",
   validateRequest({ params: deliveryEstimateIdParamSchema }),
   getDeliveryEstimateById,
 );
 
-deliveryEstimateRoute.get(
-  "/package/:packageId",
-  validateRequest({ params: packageIdParamSchema }),
-  getDeliveryEstimateByPackage,
+// Writes: admin only.
+deliveryEstimateRoute.post(
+  "/",
+  permit("admin"),
+  validateRequest({ body: createDeliveryEstimateSchema }),
+  createDeliveryEstimate,
 );
-
 deliveryEstimateRoute.patch(
   "/:id",
+  permit("admin"),
   validateRequest({
     params: deliveryEstimateIdParamSchema,
     body: updateDeliveryEstimateSchema,
   }),
   updateDeliveryEstimate,
 );
-
 deliveryEstimateRoute.delete(
   "/:id",
+  permit("admin"),
   validateRequest({ params: deliveryEstimateIdParamSchema }),
   deleteDeliveryEstimate,
 );

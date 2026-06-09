@@ -20,39 +20,18 @@ const deliveryEstimateSchema = new Schema<IDeliveryEstimate>(
       required: true,
       unique: true,
     },
-    trip: {
-      type: Schema.Types.ObjectId,
-      ref: "Trip",
-      required: false,
-    },
-    estimatedDeliveryAt: {
-      type: Date,
-      required: true,
-    },
-    minHours: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    maxHours: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
+    trip: { type: Schema.Types.ObjectId, ref: "Trip", required: false },
+    estimatedDeliveryAt: { type: Date, required: true },
+    minHours: { type: Number, required: true, min: 0 },
+    maxHours: { type: Number, required: true, min: 0 },
     status: {
       type: String,
       enum: ["estimated", "updated", "expired"],
       default: "estimated",
     },
-    reason: {
-      type: String,
-      required: false,
-      trim: true,
-    },
+    reason: { type: String, required: false, trim: true },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
 const DeliveryEstimate = model<IDeliveryEstimate>(

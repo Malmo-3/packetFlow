@@ -18,7 +18,7 @@
  * ```
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { authApi, type AuthUser } from "@packetflow/api-client";
+import { authApi, type AuthUser } from "@packetflow/backend-client";
 import type { Role } from "./types";
 
 const USER_KEY = "packetflow:user";

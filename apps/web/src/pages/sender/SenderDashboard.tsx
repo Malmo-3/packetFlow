@@ -3,7 +3,7 @@ import { Box, PackagePlus, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { useSenderPackages } from "@/api/hooks/usePackages";
+import { useSenderPackages } from "@/features/packages/usePackages";
 
 export default function SenderDashboard() {
   const { user } = useAuth();

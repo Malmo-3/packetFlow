@@ -1,6 +1,5 @@
 import { Router } from "express";
 import {
-  assignManyDeliveriesToTrip,
   assignTripToDelivery,
   createDelivery,
   deleteDelivery,
@@ -9,9 +8,10 @@ import {
   getUnassignedDeliveries,
   updateDelivery,
 } from "../controllers/delivery.controller";
+import authMiddleware from "../middleware/auth.middleware";
+import { permit } from "../middleware/rbac";
 import validateRequest from "../middleware/validateRequest";
 import {
-  assignManyDeliveriesToTripSchema,
   assignTripToDeliverySchema,
   createDeliverySchema,
   deliveryIdParamSchema,
@@ -20,55 +20,54 @@ import {
 
 const deliveryRoute = Router();
 
-// creates delivery .. 
-deliveryRoute.post(
-  "/",
-  validateRequest({ body: createDeliverySchema }),
-  createDelivery,
+// Reads: admin or carrier.
+deliveryRoute.get("/", authMiddleware, permit("admin", "carrier"), getAllDeliveries);
+// "/unassigned" before "/:id" so it isn't captured as a param.
+deliveryRoute.get(
+  "/unassigned",
+  authMiddleware,
+  permit("admin", "carrier"),
+  getUnassignedDeliveries,
 );
-
-deliveryRoute.get("/", getAllDeliveries); // get all delivereis 
-deliveryRoute.get("/unassigned", getUnassignedDeliveries); // get unassined delivreis.
-
-//get one delivery
 deliveryRoute.get(
   "/:id",
+  authMiddleware,
+  permit("admin", "carrier"),
   validateRequest({ params: deliveryIdParamSchema }),
   getDeliveryById,
 );
 
-// update delivery
+// Writes: admin only.
+deliveryRoute.post(
+  "/",
+  authMiddleware,
+  permit("admin"),
+  validateRequest({ body: createDeliverySchema }),
+  createDelivery,
+);
 deliveryRoute.patch(
   "/:id",
-  validateRequest({
-    params: deliveryIdParamSchema,
-    body: updateDeliverySchema,
-  }),
+  authMiddleware,
+  permit("admin"),
+  validateRequest({ params: deliveryIdParamSchema, body: updateDeliverySchema }),
   updateDelivery,
 );
-
-// delete delivery
 deliveryRoute.delete(
   "/:id",
+  authMiddleware,
+  permit("admin"),
   validateRequest({ params: deliveryIdParamSchema }),
   deleteDelivery,
 );
-
-// assing 1 trip to delivery 
 deliveryRoute.patch(
   "/:id/assign-trip",
+  authMiddleware,
+  permit("admin"),
   validateRequest({
     params: deliveryIdParamSchema,
     body: assignTripToDeliverySchema,
   }),
   assignTripToDelivery,
-);
-
-// assign one trip to many deliveries
-deliveryRoute.patch(
-  "/assign-many-to-trip",
-  validateRequest({ body: assignManyDeliveriesToTripSchema }),
-  assignManyDeliveriesToTrip,
 );
 
 export default deliveryRoute;

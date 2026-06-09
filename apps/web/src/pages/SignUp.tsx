@@ -4,6 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/Logo";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { defaultRouteForRole, useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
@@ -72,13 +73,7 @@ export default function SignUp() {
 
         {/* Logo */}
         <div className="mb-8">
-          <img
-            src={theme === "dark" ? "/logo-dark.svg" : "/logo.svg"}
-            alt="PacketFlow"
-            width="146"
-            height="42"
-            className="h-9 w-auto"
-          />
+          <Logo className="h-9 w-auto" />
         </div>
 
         {/* Auth form card — ex-auth-form-card */}

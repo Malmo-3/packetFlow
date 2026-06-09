@@ -3,12 +3,11 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Copy, MapPin, Package as PackageIcon, Truck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { estimateDelivery } from "@/lib/tracking";
-import { progressForStatus } from "@/lib/utils";
-import { usePackage } from "@/api/hooks/usePackages";
+import { estimateDelivery, progressForStatus } from "@/lib/utils";
+import { usePackage } from "@/features/packages/usePackages";
 import { listScansForPackage } from "@/api/scans";
-import { ScanTimeline } from "@/components/ScanTimeline";
-import { StatusBadge } from "@/components/StatusBadge";
+import { ScanTimeline } from "@/features/packages/ScanTimeline";
+import { StatusBadge } from "@/features/packages/StatusBadge";
 import { toast } from "@/hooks/use-toast";
 import type { Scan } from "@packetflow/types";
 

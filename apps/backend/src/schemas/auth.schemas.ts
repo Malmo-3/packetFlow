@@ -1,17 +1,30 @@
-import { z } from "zod"; 
+import { z } from "zod";
+import { SELF_REGISTERABLE_ROLES } from "../shared/skane";
 
+/**
+ * Registration input.
+ *
+ * SECURITY: `role` is restricted to {@link SELF_REGISTERABLE_ROLES}
+ * (sender / recipient) and defaults to `sender`. `carrier` and `admin` are
+ * rejected here — carriers are created by an admin via `POST /users`, and
+ * admins only via `src/scripts/createAdmin.ts`.
+ */
 export const registerSchema = z.object({
   fullName: z.string().trim().min(2, "Full name must be at least 2 characters"),
-  email: z.string().trim().pipe(z.email("Invalid email address")), 
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["admin", "carrier", "sender", "recipient"]).optional(),
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  role: z
+    .enum(SELF_REGISTERABLE_ROLES, {
+      message: "Self-registration is only allowed as sender or recipient",
+    })
+    .optional()
+    .default("sender"),
 });
 
 export const loginSchema = z.object({
-  // checks email format and password exxista..
-  email: z.string().trim().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"), 
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
-export type RegisterInput = z.infer<typeof registerSchema>;  
+export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

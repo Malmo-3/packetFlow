@@ -1,26 +1,25 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { usePackages } from "@/api/hooks/usePackages";
+import { usePackages } from "@/features/packages/usePackages";
+import { useTrips } from "@/hooks/useTrips";
 import { listCarriers } from "@/api/carriers";
-import { listRoutes } from "@/api/trips";
 import { listUsers } from "@/api/users";
 import { listWebhooks, listWebhookLogs } from "@/api/webhooks";
 import type { Webhook, WebhookLog } from "@packetflow/types";
 
 export default function AdminDashboard() {
   const { data: packages = [] } = usePackages();
+  const { data: trips = [] } = useTrips();
 
   // TODO: replace with React Query hooks once the API endpoints are live
   const [userCount, setUserCount] = useState(0);
   const [carrierCount, setCarrierCount] = useState(0);
-  const [routeCount, setRouteCount] = useState(0);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
 
   useEffect(() => {
     listUsers().then((u) => setUserCount(u.length)).catch(() => {});
     listCarriers().then((c) => setCarrierCount(c.length)).catch(() => {});
-    listRoutes().then((r) => setRouteCount(r.length)).catch(() => {});
     listWebhooks().then(setWebhooks).catch(() => {});
     listWebhookLogs().then(setWebhookLogs).catch(() => {});
   }, []);
@@ -37,7 +36,7 @@ export default function AdminDashboard() {
     { label: "Shipments",       value: packages.length,  helper: "Total across all senders" },
     { label: "Users",           value: userCount,        helper: "Admin, sender, recipient, carrier accounts" },
     { label: "Carriers",        value: carrierCount,     helper: "Fleet resources in this workspace" },
-    { label: "Trips",           value: routeCount,       helper: "Configured multi-stop delivery routes" },
+    { label: "Trips",           value: trips.length,     helper: "Configured multi-stop delivery routes" },
     { label: "Integrations",    value: webhooks.length,  helper: "Integration endpoints configured" },
     { label: "Delivery Events", value: webhookLogs.length, helper: "Recorded deliveries to endpoints" },
   ];
