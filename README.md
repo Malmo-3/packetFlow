@@ -13,7 +13,7 @@ packetFlowTest/
 │   └── web/          React + Vite frontend
 ├── packages/
 │   ├── api-client/   Typed HTTP client shared by web and mobile
-│   └── types/        Shared domain types and Skåne city constants 
+│   └── types/        Shared domain types and Skåne city constants
 ```
 
 ---

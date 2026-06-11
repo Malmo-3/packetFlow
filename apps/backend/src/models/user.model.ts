@@ -7,6 +7,10 @@ export interface IUser {
   email: string;
   password: string;
   role: UserRole;
+  /** When set, the carrier is currently on an active shift. Cleared on end-shift. */
+  shiftStartedAt?: Date | null;
+  /** Unique public identifier for carriers (e.g. `CR-7QF3K9PA`), assigned at approval. */
+  carrierId?: string;
 }
 
 const userSchema = new Schema<IUser>(
@@ -32,6 +36,18 @@ const userSchema = new Schema<IUser>(
       type: String,
       enum: ["admin", "carrier", "sender", "recipient"],
       default: "sender",
+    },
+    shiftStartedAt: {
+      type: Date,
+      required: false,
+      default: null,
+    },
+    carrierId: {
+      type: String,
+      required: false,
+      unique: true,
+      sparse: true,
+      trim: true,
     },
   },
   {

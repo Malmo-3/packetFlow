@@ -17,6 +17,8 @@ export interface BackendUser {
   fullName: string;
   email: string;
   role: UserRole;
+  /** Unique public carrier id (e.g. `CR-7QF3K9PA`) — present for carriers. */
+  carrierId?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, Loader2, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,13 +64,20 @@ function CreateTripDialog() {
   const createTrip = useCreateTrip();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [nameEdited, setNameEdited] = useState(false);
   const [startCity, setStartCity] = useState<SkaneCity | "">("");
   const [endCity, setEndCity] = useState<SkaneCity | "">("");
   const [stops, setStops] = useState<SkaneCity[]>([]);
   const [stopToAdd, setStopToAdd] = useState<SkaneCity | "">("");
 
+  // Auto-generate the trip name from the route until the admin types their own.
+  useEffect(() => {
+    if (nameEdited) return;
+    setName(startCity && endCity ? `${startCity} → ${endCity}` : "");
+  }, [startCity, endCity, nameEdited]);
+
   const reset = () => {
-    setName(""); setStartCity(""); setEndCity(""); setStops([]); setStopToAdd("");
+    setName(""); setNameEdited(false); setStartCity(""); setEndCity(""); setStops([]); setStopToAdd("");
   };
 
   const addStop = (city: SkaneCity) => {
@@ -116,14 +123,19 @@ function CreateTripDialog() {
           <DialogTitle>Create trip</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          {/* Trip name */}
+          {/* Trip name — auto-generated from the route, editable */}
           <div className="space-y-1.5">
-            <Label htmlFor="ct-name">Trip name</Label>
+            <Label htmlFor="ct-name">
+              Trip name <span className="text-xs text-muted-foreground">(auto-generated, editable)</span>
+            </Label>
             <Input
               id="ct-name"
-              placeholder="e.g. Malmö–Lund South Loop"
+              placeholder="Select start and end cities…"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameEdited(true);
+              }}
             />
           </div>
 
@@ -354,14 +366,17 @@ export default function AdminTrips() {
                           <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
                           {carriers.map((c) => (
                             <SelectItem key={c._id} value={c._id}>
-                              {c.fullName}
+                              {c.fullName}{c.carrierId ? ` · ${c.carrierId}` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       {assignedCarrier && (
                         <p className="text-xs text-muted-foreground">
-                          {assignedCarrier.fullName} · {assignedCarrier.email}
+                          {assignedCarrier.fullName}
+                          {assignedCarrier.carrierId ? (
+                            <span className="font-mono"> · {assignedCarrier.carrierId}</span>
+                          ) : null}
                         </p>
                       )}
                       {carriers.length === 0 && (

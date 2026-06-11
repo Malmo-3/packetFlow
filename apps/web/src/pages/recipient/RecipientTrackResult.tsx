@@ -6,14 +6,15 @@ import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { TrackingMap } from "@/components/TrackingMap";
 import { useAuth } from "@/lib/auth";
-import { estimateDelivery, progressForStatus } from "@/lib/utils";
 import { usePackageByCode } from "@/features/packages/usePackages";
+import { getPackageTrip } from "@/features/packages/packagesApi";
 import { listScansForPackage } from "@/api/scans";
 import { listSavedTracking, removeTrackingCode, saveTrackingCode } from "@/api/savedTracking";
 import { ScanTimeline } from "@/features/packages/ScanTimeline";
 import { StatusBadge } from "@/features/packages/StatusBadge";
 import { toast } from "@/hooks/use-toast";
 import type { Scan } from "@packetflow/types";
+import type { BackendTrip } from "@packetflow/backend-client";
 
 export default function RecipientTrackResult() {
   const { code = "" } = useParams();
@@ -21,6 +22,7 @@ export default function RecipientTrackResult() {
   const { user } = useAuth();
   const { data: pkg, isLoading, refetch } = usePackageByCode(code);
   const [scans, setScans] = useState<Scan[]>([]);
+  const [trip, setTrip] = useState<BackendTrip | null>(null);
   const [savedCodes, setSavedCodes] = useState<string[]>([]);
 
   // Re-fetch tracking every 30s for the polling effect the UI advertises.
@@ -32,13 +34,31 @@ export default function RecipientTrackResult() {
   useEffect(() => {
     if (!pkg?.id) return;
     let cancelled = false;
-    listScansForPackage(pkg.id).then((result) => {
-      if (!cancelled) setScans(result);
-    });
+    const load = () =>
+      listScansForPackage(pkg.id).then((result) => {
+        if (!cancelled) setScans(result);
+      });
+    load();
+    // Poll so the timeline updates as the carrier scans/advances.
+    const i = setInterval(load, 30_000);
     return () => {
       cancelled = true;
+      clearInterval(i);
     };
   }, [pkg?.id]);
+
+  // The package's trip drives the live map (all stops + the carrier's current
+  // position, advanced from the mobile app). Polled so the marker keeps moving.
+  useEffect(() => {
+    if (!pkg?.id) return;
+    let cancelled = false;
+    const load = () => getPackageTrip(pkg.id).then((t) => { if (!cancelled) setTrip(t); }).catch(() => {});
+    load();
+    const i = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(i); };
+  }, [pkg?.id]);
+
+  const journey = trip ? [trip.startCity, ...(trip.stops ?? []), trip.endCity] : undefined;
 
   useEffect(() => {
     if (!user) {
@@ -55,9 +75,6 @@ export default function RecipientTrackResult() {
   }, [user]);
 
   // TODO: fetch carrier from GET /api/v1/carriers/:id once that endpoint exists
-  const carrier = undefined;
-  const eta = pkg ? estimateDelivery(pkg) : null;
-  const progress = pkg ? progressForStatus(pkg.status) : 0;
   const isSaved = user && pkg ? savedCodes.includes(pkg.trackingCode) : false;
 
   const toggleSave = async () => {
@@ -133,31 +150,10 @@ export default function RecipientTrackResult() {
             </header>
 
             <Card className="border-border bg-card p-6">
-              <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
-                <span className="inline-flex items-center gap-2">
-                  <RefreshCw className="h-3 w-3 animate-pulse-dot" /> Live tracking · refreshes every 30s
-                </span>
-                <span>
-                  {eta && pkg.status !== "delivered"
-                    ? `ETA ${new Date(eta).toLocaleDateString()}`
-                    : pkg.status === "delivered"
-                    ? "Delivered"
-                    : "—"}
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-secondary">
-                <div
-                  className="h-full rounded-full bg-foreground transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </Card>
-
-            <Card className="border-border bg-card p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-bold">Live map</h2>
-                <span className="text-sm text-muted-foreground">
-                  {pkg.pickupCity} → {pkg.destinationCity}
+                <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+                  <RefreshCw className="h-3 w-3 animate-pulse-dot" /> Live · refreshes every 30s
                 </span>
               </div>
               <TrackingMap
@@ -165,7 +161,16 @@ export default function RecipientTrackResult() {
                 destinationCity={pkg.destinationCity}
                 scans={scans}
                 status={pkg.status}
+                journey={journey}
+                currentStopIndex={trip?.currentStopIndex ?? 0}
               />
+              {journey && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {pkg.status === "delivered"
+                    ? "Delivered"
+                    : `Currently at ${journey[Math.min(trip?.currentStopIndex ?? 0, journey.length - 1)]}`}
+                </p>
+              )}
             </Card>
 
             <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
@@ -183,7 +188,7 @@ export default function RecipientTrackResult() {
                     label="Dimensions"
                     value={`${pkg.dimensions.length} × ${pkg.dimensions.width} × ${pkg.dimensions.height} cm`}
                   />
-                  <Row icon={Truck} label="Carrier" value={carrier?.name ?? "Awaiting assignment"} />
+                  <Row icon={Truck} label="Carrier" value={trip?.assignedCarrierCode ?? "Awaiting assignment"} />
                 </dl>
                 {!user && (
                   <div className="mt-5 rounded-md border border-border bg-secondary/40 p-3 text-xs text-muted-foreground">

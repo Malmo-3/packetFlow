@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 196 56" width="196" height="56" role="img" aria-label="PacketFlow">
+  <title>PacketFlow</title>
+  <!-- Isometric box mark — three faces in the design-system palette.
+       Top face:   #e2e2e2 (surface-pressed) — lit surface, recedes on white.
+       Left face:  #5e5e5e (body gray)        — shade side.
+       Right face: #000000 (ink black)        — shadow side, primary brand anchor. -->
+  <polygon points="32,11 56,24 32,37 8,24"  fill="#e2e2e2"/>
+  <polygon points="8,24 32,37 32,55 8,42"   fill="#5e5e5e"/>
+  <polygon points="32,37 56,24 56,42 32,55" fill="#000000"/>
+  <!-- Wordmark: Inter 700, tight tracking -->
+  <text x="68" y="40"
+    font-family="Inter, ui-sans-serif, system-ui, -apple-system, Helvetica Neue, Arial, sans-serif"
+    font-weight="700"
+    font-size="22"
+    letter-spacing="-0.5"
+    fill="#000000">PacketFlow</text>
+</svg>

@@ -2,9 +2,11 @@ import type { NextFunction, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import User from "../models/user.model";
+import Package from "../models/package.model";
 import type { LoginInput, RegisterInput } from "../schemas/auth.schemas";
 import ConflictError from "../errors/ConflictError";
 import UnauthorizedError from "../errors/UnauthorizedError";
+import NotFoundError from "../errors/NotFoundError";
 
 /**
  * POST /auth/register
@@ -121,6 +123,59 @@ export const getMe = async (
       message: "Authenticated user fetched successfully",
       data: req.user,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** PATCH /auth/me — update the signed-in user's own profile (name). */
+export const updateMe = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const body = req.body as { fullName?: string };
+    const update: Record<string, unknown> = {};
+    if (typeof body.fullName === "string" && body.fullName.trim()) {
+      update.fullName = body.fullName.trim();
+    }
+
+    const user = await User.findByIdAndUpdate(req.user!.userId, update, {
+      new: true,
+    }).select("-password");
+    if (!user) return next(new NotFoundError("User not found"));
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated",
+      data: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** DELETE /auth/me — delete the signed-in user's own account. */
+export const deleteMe = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const deleted = await User.findByIdAndDelete(userId);
+    if (!deleted) return next(new NotFoundError("User not found"));
+
+    // Detach the sender reference from any packages they created.
+    await Package.updateMany({ senderId: userId }, { $unset: { senderId: 1 } });
+
+    res.status(200).json({ success: true, message: "Account deleted" });
   } catch (error) {
     next(error);
   }

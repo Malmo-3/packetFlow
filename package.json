@@ -1,30 +1,18 @@
 {
   "name": "packetflow",
-  "version": "1.0.0",
   "private": true,
-  "description": "",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
-    "dev:backend": "npm --prefix apps/backend run dev",
-    "build:backend": "npm --prefix apps/backend run build",
-    "start:backend": "npm --prefix apps/backend run start",
-    "test:backend": "npm --prefix apps/backend run test",
-    "dev:web": "npm --prefix apps/web run dev",
-    "build:web": "npm --prefix apps/web run build",
-    "test": "npm --prefix apps/backend run test"
+    "dev:api":    "npm -w @packetflow/backend run dev",
+    "dev:web":    "npm -w @packetflow/web run dev",
+    "build:api":  "npm -w @packetflow/backend run build",
+    "build:web":  "npm -w @packetflow/web run build",
+    "test":       "npm -w @packetflow/backend run test"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Malmo-3/packetFlow.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/Malmo-3/packetFlow/issues"
-  },
-  "homepage": "https://github.com/Malmo-3/packetFlow#readme"
+  "dependencies": {
+    "mongoose": "^9.4.1"
+  }
 }

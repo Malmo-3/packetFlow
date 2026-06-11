@@ -5,6 +5,7 @@ import {
   deletePackageById,
   getAllPackages,
   getPackageById,
+  getPackageTrip,
   markPickedUp,
   updatePackageById,
 } from "../controllers/package.controller";
@@ -35,6 +36,12 @@ packageRoute.get(
   authMiddleware,
   validateRequest({ params: objectIdParamSchema }),
   getPackageById,
+);
+packageRoute.get(
+  "/:id/trip",
+  authMiddleware,
+  validateRequest({ params: objectIdParamSchema }),
+  getPackageTrip,
 );
 
 // Admin (any field) or carrier (status only, forward-only).

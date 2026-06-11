@@ -12,15 +12,28 @@ export type Role = "admin" | "carrier" | "sender" | "recipient";
 /**
  * Roles a user is allowed to pick when self-registering.
  *
- * Only `sender` and `recipient` self-register. `carrier` now requires
- * admin approval (created via the admin-only `POST /users` endpoint), and
- * `admin` is created only via the `createAdmin` script. Together these close
- * the privilege-escalation hole where registration trusted a client role.
+ * Only `sender` and `recipient` self-register. `carrier` applicants submit a
+ * carrier application (`POST /carrier-applications`) which an admin approves —
+ * the carrier User is created at approval time. `admin` is created only via the
+ * `createAdmin` script. Listing the allowed roles explicitly closes the
+ * privilege-escalation hole where registration trusted any client-supplied role.
  */
 export const SELF_REGISTERABLE_ROLES = ["sender", "recipient"] as const;
 
 /** Roles an admin may create through the admin-only user-creation endpoint. */
 export const ADMIN_CREATABLE_ROLES = ["sender", "recipient", "carrier"] as const;
+
+/**
+ * Valid Swedish registration plate formats (matched on a normalised value):
+ * - Current (since 2019): 3 letters, 2 digits, 1 letter — e.g. `ABC 12D`
+ * - Older:                3 letters, 3 digits           — e.g. `ABC 123`
+ */
+export const SWEDISH_PLATE_REGEX = /^[A-Z]{3}\d{2}[A-Z]$|^[A-Z]{3}\d{3}$/;
+
+/** True if `value` is a valid Swedish registration plate (space/case-insensitive). */
+export function isSwedishPlate(value: string): boolean {
+  return SWEDISH_PLATE_REGEX.test(value.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+}
 
 /**
  * Package lifecycle states. Transitions are strictly forward:

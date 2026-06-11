@@ -17,6 +17,7 @@ interface BackendUser {
   fullName: string;
   email: string;
   role: Role;
+  carrierId?: string;
   createdAt: string;
 }
 
@@ -25,6 +26,7 @@ const toUser = (u: BackendUser): User => ({
   name: u.fullName,
   email: u.email,
   role: u.role,
+  carrierId: u.carrierId,
   createdAt: u.createdAt,
 });
 

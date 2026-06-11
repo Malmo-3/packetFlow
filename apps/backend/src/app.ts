@@ -8,14 +8,26 @@ import routes from "./routes";
 
 const app = express();
 
-// CORS allowlist from CORS_ORIGINS (comma-separated), with local dev defaults.
-const allowedOrigins = (
-  process.env.CORS_ORIGINS ||
-  "http://localhost:5173,http://localhost:8080"
-)
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
+// CORS allowlist: origins from CORS_ORIGINS (comma-separated) merged with local
+// dev defaults. Outside production we always allow the common local dev ports —
+// Vite (5173), the web app (8080), and Expo web (8081 / 19006) — so the Expo
+// web build can reach the API without extra config.
+const LOCAL_DEV_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:8080",
+  "http://localhost:8081",
+  "http://localhost:19006",
+];
+
+const allowedOrigins = Array.from(
+  new Set([
+    ...(process.env.CORS_ORIGINS || "")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean),
+    ...(process.env.NODE_ENV === "production" ? [] : LOCAL_DEV_ORIGINS),
+  ]),
+);
 
 const corsOptions: CorsOptions = {
   origin(origin, callback) {

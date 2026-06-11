@@ -93,9 +93,88 @@ interface TrackingMapProps {
   destinationCity?: string;
   scans: Scan[];
   status: PackageStatus;
+  /** Ordered trip cities [start, ...stops, end]. When given, every stop is shown. */
+  journey?: string[];
+  /** The carrier's current position within `journey`. */
+  currentStopIndex?: number;
 }
 
-export function TrackingMap({ pickupCity, destinationCity, scans, status }: TrackingMapProps) {
+export function TrackingMap({
+  pickupCity,
+  destinationCity,
+  scans,
+  status,
+  journey,
+  currentStopIndex = 0,
+}: TrackingMapProps) {
+  const delivered = status === "delivered";
+
+  // ── Journey mode: plot every stop on the trip + the carrier's position ──
+  const cityPoints = (journey ?? [])
+    .map((city) => ({ city, coord: CITY_COORDS[city] }))
+    .filter((c): c is { city: string; coord: { lat: number; lng: number } } => Boolean(c.coord))
+    .map((c) => ({ city: c.city, ...project(c.coord.lat, c.coord.lng) }));
+
+  if (cityPoints.length >= 2) {
+    const lastIdx = cityPoints.length - 1;
+    const curIdx = delivered ? lastIdx : Math.min(Math.max(currentStopIndex, 0), lastIdx);
+    const seg = (a: number, b: number) =>
+      cityPoints.slice(a, b + 1).map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+    const travelledD = curIdx > 0 ? seg(0, curIdx) : "";
+    const remainingD = curIdx < lastIdx ? seg(curIdx, lastIdx) : "";
+    const cur = cityPoints[curIdx];
+
+    return (
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="h-auto w-full select-none rounded-lg border border-border bg-secondary/30"
+        role="img"
+        aria-label="Live trip tracking map"
+      >
+        <path d={outlinePath} className="fill-muted stroke-border" strokeWidth={1.5} />
+        {remainingD && (
+          <path d={remainingD} className="stroke-muted-foreground" strokeWidth={2} strokeDasharray="5 6" strokeLinecap="round" fill="none" opacity={0.6} />
+        )}
+        {travelledD && (
+          <path d={travelledD} className="stroke-foreground" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        )}
+        {cityPoints.map((p, i) => {
+          const passed = i < curIdx;
+          const isCurrent = i === curIdx;
+          const cls = passed
+            ? "fill-green-500 stroke-foreground"
+            : isCurrent
+            ? "fill-foreground stroke-foreground"
+            : "fill-card stroke-foreground";
+          return (
+            <g key={`${p.city}-${i}`}>
+              <circle cx={p.x} cy={p.y} r={isCurrent ? 6 : 4.5} className={cls} strokeWidth={2} />
+              <text
+                x={p.x}
+                y={i % 2 === 0 ? p.y - 10 : p.y + 18}
+                textAnchor="middle"
+                className={isCurrent ? "fill-foreground" : "fill-muted-foreground"}
+                fontSize={11}
+                fontWeight={isCurrent ? 700 : 500}
+              >
+                {p.city}
+              </text>
+            </g>
+          );
+        })}
+        {!delivered && (
+          <g>
+            <circle cx={cur.x} cy={cur.y} r={6} className="fill-foreground" opacity={0.25}>
+              <animate attributeName="r" values="6;14;6" dur="2s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.35;0;0.35" dur="2s" repeatCount="indefinite" />
+            </circle>
+            <circle cx={cur.x} cy={cur.y} r={5} className="fill-foreground stroke-card" strokeWidth={2} />
+          </g>
+        )}
+      </svg>
+    );
+  }
+
   const origin = pickupCity ? CITY_COORDS[pickupCity] : undefined;
   const dest = destinationCity ? CITY_COORDS[destinationCity] : undefined;
 
@@ -117,8 +196,6 @@ export function TrackingMap({ pickupCity, destinationCity, scans, status }: Trac
         s.lng <= BBOX.maxLng,
     )
     .sort((a, b) => +new Date(a.timestamp) - +new Date(b.timestamp));
-
-  const delivered = status === "delivered";
 
   // The full ordered list of waypoints: origin → scans → destination.
   const originPt = project(origin.lat, origin.lng);

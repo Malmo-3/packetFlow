@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getMe, loginUser, registerUser } from "../controllers/auth.controller";
+import { deleteMe, getMe, loginUser, registerUser, updateMe } from "../controllers/auth.controller";
 import authMiddleware from "../middleware/auth.middleware";
 import validateRequest from "../middleware/validateRequest";
 import { loginSchema, registerSchema } from "../schemas/auth.schemas";
@@ -17,5 +17,7 @@ authRoute.post(
   loginUser,
 );
 authRoute.get("/me", authMiddleware, getMe);
+authRoute.patch("/me", authMiddleware, updateMe);
+authRoute.delete("/me", authMiddleware, deleteMe);
 
 export default authRoute;

@@ -6,8 +6,8 @@ import { SELF_REGISTERABLE_ROLES } from "../shared/skane";
  *
  * SECURITY: `role` is restricted to {@link SELF_REGISTERABLE_ROLES}
  * (sender / recipient) and defaults to `sender`. `carrier` and `admin` are
- * rejected here — carriers are created by an admin via `POST /users`, and
- * admins only via `src/scripts/createAdmin.ts`.
+ * rejected here — carriers submit an application (`POST /carrier-applications`)
+ * that an admin approves, and admins are created only via `createAdmin`.
  */
 export const registerSchema = z.object({
   fullName: z.string().trim().min(2, "Full name must be at least 2 characters"),

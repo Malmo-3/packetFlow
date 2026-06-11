@@ -3,12 +3,21 @@
 
 import { Router } from "express";
 import {
+  acceptTrip,
+  advanceTrip,
   checkIn,
   checkOut,
+  deleteAccount,
   endShift,
+  endShiftSession,
   getAssignedTrip,
+  getHistory,
+  getMe,
+  getShift,
   getTripPackages,
   scanPackage,
+  startShift,
+  updateProfile,
   validatePackageScan,
 } from "../controllers/carrier.controller";
 import authMiddleware from "../middleware/auth.middleware";
@@ -23,7 +32,29 @@ const carrierRoute = Router();
 
 carrierRoute.use(authMiddleware, permit("carrier"));
 
+// Self-service: profile, history, edit, delete.
+carrierRoute.get("/me", getMe);
+carrierRoute.get("/history", getHistory);
+carrierRoute.patch("/profile", updateProfile);
+carrierRoute.delete("/account", deleteAccount);
+
+// Shift lifecycle (carrier on/off duty)
+carrierRoute.get("/shift", getShift);
+carrierRoute.post("/shift/start", startShift);
+carrierRoute.post("/shift/end", endShiftSession);
+
 carrierRoute.get("/trip", getAssignedTrip);
+
+carrierRoute.post(
+  "/trips/:tripId/accept",
+  validateRequest({ params: carrierTripParamSchema }),
+  acceptTrip,
+);
+carrierRoute.post(
+  "/trips/:tripId/advance",
+  validateRequest({ params: carrierTripParamSchema }),
+  advanceTrip,
+);
 
 carrierRoute.get(
   "/trips/:tripId/packages",

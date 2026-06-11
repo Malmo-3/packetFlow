@@ -1,8 +1,22 @@
 import type { NextFunction, Request, Response } from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import CarrierApplication from "../models/carrierApplication.model";
 import User from "../models/user.model";
 import Carrier from "../models/carrier.model";
+
+/** Generate a unique public carrier id like `CR-7QF3K9PA`. */
+async function generateCarrierId(): Promise<string> {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous 0/O/1/I
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const bytes = crypto.randomBytes(8);
+    const code = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+    const candidate = `CR-${code}`;
+    const clash = await User.findOne({ carrierId: candidate }).lean();
+    if (!clash) return candidate;
+  }
+  return `CR-${Date.now().toString(36).toUpperCase()}`;
+}
 import NotFoundError from "../errors/NotFoundError";
 import ConflictError from "../errors/ConflictError";
 import BadRequestError from "../errors/BadRequestError";
@@ -91,11 +105,14 @@ export const approveCarrierApplication = async (
       return next(new ConflictError("An account with this email already exists"));
     }
 
+    const carrierId = await generateCarrierId();
+
     const user = await User.create({
       fullName: application.fullName,
       email: application.email,
       password: application.passwordHash, // already hashed at submission
       role: "carrier",
+      carrierId,
     });
 
     await Carrier.create({
@@ -114,6 +131,7 @@ export const approveCarrierApplication = async (
       message: "Carrier approved and account created",
       data: {
         id: user._id,
+        carrierId: user.carrierId,
         fullName: user.fullName,
         email: user.email,
         role: user.role,

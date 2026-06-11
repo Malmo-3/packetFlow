@@ -133,3 +133,31 @@ export const DROP_OFF_POINTS: Record<SkaneCity, string> = {
   Ängelholm:     "PacketFlow Ängelholm, Järnvägsgatan 20, 262 32 Ängelholm",
   Örkelljunga:   "PacketFlow Örkelljunga, Stortorget 4, 286 30 Örkelljunga",
 };
+
+// ---------------------------------------------------------------------------
+// Swedish vehicle registration plates
+// ---------------------------------------------------------------------------
+
+/**
+ * Valid Swedish registration plate formats (matched against a normalised,
+ * space-stripped, upper-cased value):
+ * - Current (since 2019): 3 letters, 2 digits, 1 letter — e.g. `ABC 12D`
+ * - Older:                3 letters, 3 digits           — e.g. `ABC 123`
+ */
+export const SWEDISH_PLATE_REGEX = /^[A-Z]{3}\d{2}[A-Z]$|^[A-Z]{3}\d{3}$/;
+
+/** Upper-case and strip spaces / punctuation. */
+export function normalizePlate(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/** True if `value` is a valid Swedish registration plate. */
+export function isSwedishPlate(value: string): boolean {
+  return SWEDISH_PLATE_REGEX.test(normalizePlate(value));
+}
+
+/** Format for display/input: a space after the first 3 letters, capped at 6 chars. */
+export function formatPlate(value: string): string {
+  const n = normalizePlate(value).slice(0, 6);
+  return n.length > 3 ? `${n.slice(0, 3)} ${n.slice(3)}` : n;
+}

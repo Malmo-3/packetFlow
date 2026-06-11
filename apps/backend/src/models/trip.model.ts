@@ -10,6 +10,13 @@ export interface ITrip {
   stops: string[];
   assignedCarrier?: Types.ObjectId;
   status: TripStatus;
+  /** Carrier has acknowledged/accepted the assignment (before starting). */
+  accepted: boolean;
+  /**
+   * Index into the journey `[startCity, ...stops, endCity]` marking the
+   * carrier's current position. Advanced as the carrier scans through stops.
+   */
+  currentStopIndex: number;
 }
 
 const tripSchema = new Schema<ITrip>(
@@ -48,6 +55,14 @@ const tripSchema = new Schema<ITrip>(
       type: String,
       enum: ["planned", "active", "completed"],
       default: "planned",
+    },
+    accepted: {
+      type: Boolean,
+      default: false,
+    },
+    currentStopIndex: {
+      type: Number,
+      default: 0,
     },
   },
   {

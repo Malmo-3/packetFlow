@@ -15,6 +15,7 @@
  */
 
 import { request } from "./client";
+import type { BackendTrip } from "./trips";
 
 // ---------------------------------------------------------------------------
 // Backend response wrappers
@@ -122,6 +123,18 @@ export async function listPackages(signal?: AbortSignal): Promise<BackendPackage
 /** Fetch a single package by its MongoDB `_id`. */
 export async function getPackageById(id: string, signal?: AbortSignal): Promise<BackendPackage> {
   const res = await request<WrappedSingle<BackendPackage>>(`/packages/${encodeURIComponent(id)}`, { signal });
+  return res.data;
+}
+
+/**
+ * Fetch the trip a package is travelling on (resolved via its delivery).
+ * Returns `null` if the package has not been assigned to a trip yet.
+ */
+export async function getPackageTrip(id: string, signal?: AbortSignal): Promise<BackendTrip | null> {
+  const res = await request<WrappedSingle<BackendTrip | null>>(
+    `/packages/${encodeURIComponent(id)}/trip`,
+    { signal },
+  );
   return res.data;
 }
 

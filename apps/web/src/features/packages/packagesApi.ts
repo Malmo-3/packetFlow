@@ -13,10 +13,15 @@
  * surfaced for admin and carrier views.
  */
 
-import { packagesApi, type BackendPackage, type CreatePackageInput, type UpdatePackageInput } from "@packetflow/backend-client";
+import { packagesApi, type BackendPackage, type BackendTrip, type CreatePackageInput, type UpdatePackageInput } from "@packetflow/backend-client";
 import type { Package, PackageStatus } from "@packetflow/types";
 
 export type { CreatePackageInput, UpdatePackageInput };
+
+/** The trip (stops + currentStopIndex) a package is on, or null if unassigned. */
+export async function getPackageTrip(id: string, signal?: AbortSignal): Promise<BackendTrip | null> {
+  return packagesApi.getPackageTrip(id, signal);
+}
 
 // ---------------------------------------------------------------------------
 // Status normalisation
@@ -111,14 +116,23 @@ export async function getPackageById(id: string, signal?: AbortSignal): Promise<
 }
 
 /**
+ * Canonicalise a tracking code for tolerant comparison: upper-case, strip any
+ * non-alphanumerics (spaces, dashes), and drop an optional leading "PKT" prefix.
+ * This lets "PKT-G87MV4S1", "pkt g87mv4s1" and bare "g87mv4s1" all match.
+ */
+function canonicalCode(value: string): string {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^PKT/, "");
+}
+
+/**
  * Fetches the full list and finds by tracking code client-side.
  * TODO(backend): replace with GET /api/v1/packages/by-code/:code once that endpoint exists.
  */
 export async function getPackageByCode(code: string, signal?: AbortSignal): Promise<PackageView | undefined> {
-  const normalised = code.trim().toLowerCase();
-  if (!normalised) return undefined;
+  const target = canonicalCode(code);
+  if (!target) return undefined;
   const all = await listPackages(signal);
-  return all.find((p) => p.trackingCode.toLowerCase() === normalised);
+  return all.find((p) => canonicalCode(p.trackingCode) === target);
 }
 
 export async function createPackage(input: CreatePackageInput): Promise<Package> {

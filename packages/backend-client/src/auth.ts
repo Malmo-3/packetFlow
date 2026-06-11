@@ -150,3 +150,28 @@ export async function me(): Promise<AuthUser | null> {
 export function logout(): void {
   clearToken();
 }
+
+interface UpdateMeResponse {
+  success: boolean;
+  data: BackendUser & { role: AuthUser["role"] };
+}
+
+/** Update the signed-in user's own profile (currently the display name). */
+export async function updateProfile(input: { fullName?: string }): Promise<AuthUser> {
+  const res = await request<UpdateMeResponse>("/auth/me", {
+    method: "PATCH",
+    body: input,
+  });
+  return fromBackendUser({
+    id: res.data.id,
+    fullName: res.data.fullName,
+    email: res.data.email,
+    role: res.data.role,
+  });
+}
+
+/** Delete the signed-in user's own account, then clear the local token. */
+export async function deleteAccount(): Promise<void> {
+  await request("/auth/me", { method: "DELETE" });
+  clearToken();
+}

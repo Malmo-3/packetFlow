@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 196 56" width="196" height="56" role="img" aria-label="PacketFlow">
+  <title>PacketFlow</title>
+  <!-- Inverted palette for use on black/dark backgrounds.
+       Top face:   #ffffff (white)    — maximum contrast, lit surface.
+       Left face:  #888888 (mid-gray) — shade side, reads against black.
+       Right face: #5e5e5e (body)     — shadow side. -->
+  <polygon points="32,11 56,24 32,37 8,24"  fill="#ffffff"/>
+  <polygon points="8,24 32,37 32,55 8,42"   fill="#888888"/>
+  <polygon points="32,37 56,24 56,42 32,55" fill="#5e5e5e"/>
+  <text x="68" y="40"
+    font-family="Inter, ui-sans-serif, system-ui, -apple-system, Helvetica Neue, Arial, sans-serif"
+    font-weight="700"
+    font-size="22"
+    letter-spacing="-0.5"
+    fill="#ffffff">PacketFlow</text>
+</svg>

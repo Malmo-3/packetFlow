@@ -41,6 +41,12 @@ export interface BackendTrip {
   /** ObjectId of the assigned carrier user; absent if unassigned. */
   assignedCarrier?: string;
   status: TripStatus;
+  /** Carrier has acknowledged/accepted the assignment (before starting). */
+  accepted?: boolean;
+  /** Index into the journey `[startCity, ...stops, endCity]` — the carrier's current position. */
+  currentStopIndex?: number;
+  /** The assigned carrier's public id (e.g. `CR-7QF3K9PA`); included by some endpoints. */
+  assignedCarrierCode?: string | null;
   createdAt: string;
   updatedAt: string;
 }

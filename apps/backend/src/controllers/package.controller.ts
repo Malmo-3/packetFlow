@@ -250,6 +250,39 @@ export const getPackageById = async (
   }
 };
 
+// GET /packages/:id/trip — the trip (stops + currentStopIndex) this package is
+// travelling on, resolved via its delivery. Returns null if not yet assigned.
+export const getPackageTrip = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { id } = req.validatedParams as PackageIdParams;
+
+    const pkg = await Package.findById(id);
+    if (!pkg) return next(new NotFoundError("Package not found"));
+
+    const delivery = await Delivery.findOne({ package: id });
+    const trip = delivery?.trip ? await Trip.findById(delivery.trip) : null;
+
+    // Attach the assigned carrier's public id (carriers are shown by id, not name).
+    let data: Record<string, unknown> | null = null;
+    if (trip) {
+      const obj = trip.toObject() as unknown as Record<string, unknown>;
+      if (trip.assignedCarrier) {
+        const carrierUser = await User.findById(trip.assignedCarrier).select("carrierId");
+        obj.assignedCarrierCode = carrierUser?.carrierId ?? null;
+      }
+      data = obj;
+    }
+
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const CARRIER_STATUS_ORDER = [
   "registered",
   "in_transit",

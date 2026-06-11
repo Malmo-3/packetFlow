@@ -42,6 +42,8 @@ export interface IUser {
   role: Role;
   address?: string;
   phone?: string;
+  /** Unique public carrier id (e.g. `CR-7QF3K9PA`) — present for carriers. */
+  carrierId?: string;
   createdAt: string;
 }
 

@@ -37,7 +37,7 @@ function AssignDialog({
 }: {
   pkg: PackageView;
   trips: BackendTrip[];
-  carriers: { _id: string; fullName: string; email: string }[];
+  carriers: { _id: string; fullName: string; email: string; carrierId?: string }[];
   onClose: () => void;
 }) {
   const [tripId, setTripId] = useState("");
@@ -48,7 +48,9 @@ function AssignDialog({
 
   const carrierName = (id?: string) => {
     if (!id) return "Unassigned";
-    return carriers.find((c) => c._id === id)?.fullName ?? "Unknown";
+    const c = carriers.find((c) => c._id === id);
+    if (!c) return "Unknown";
+    return c.carrierId ? `${c.fullName} · ${c.carrierId}` : c.fullName;
   };
 
   const handleAssign = async () => {

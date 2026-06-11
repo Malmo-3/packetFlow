@@ -6,9 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { getPackageByCode } from "@/features/packages/packagesApi";
 
+/** Force the value to always carry the `PKT-` prefix; the user only edits the suffix. */
+function withPktPrefix(input: string): string {
+  const suffix = input.toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^PKT/, "");
+  return `PKT-${suffix}`;
+}
+
 export default function RecipientTrack() {
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState("PKT-");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -45,7 +51,7 @@ export default function RecipientTrack() {
               className="pl-9 font-mono uppercase"
               placeholder="PKT-XXXXXXXX"
               value={code}
-              onChange={(e) => { setCode(e.target.value); setError(null); }}
+              onChange={(e) => { setCode(withPktPrefix(e.target.value)); setError(null); }}
             />
           </div>
           {error && (

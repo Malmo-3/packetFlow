@@ -86,7 +86,12 @@ export default function AdminUsers() {
             {filtered.map((user) => (
               <tr key={user.id} className="border-t border-border hover:bg-secondary/40">
                 <td className="px-4 py-3">
-                  <div className="font-medium">{user.name}</div>
+                  <div className="font-medium">
+                    {user.name}
+                    {user.carrierId && (
+                      <span className="ml-2 font-mono text-xs text-muted-foreground">{user.carrierId}</span>
+                    )}
+                  </div>
                   {user.address && <div className="text-xs text-muted-foreground">{user.address}</div>}
                 </td>
                 <td className="px-4 py-3">{user.email}</td>
