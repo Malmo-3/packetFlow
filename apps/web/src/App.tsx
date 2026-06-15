@@ -33,10 +33,14 @@ import AdminApplications from "./pages/admin/AdminApplications";
 import CarrierPackages from "./features/packages/CarrierPackages";
 import CarrierTrips from "./pages/carrier/CarrierTrips";
 import NotificationsPage from "./pages/Notifications";
+import type { ReactNode } from "react";
 
 const queryClient = new QueryClient();
 
-const shell = (allow: Parameters<typeof ProtectedRoute>[0]["allow"], element: JSX.Element) => (
+const shell = (
+  allow: Parameters<typeof ProtectedRoute>[0]["allow"],
+  element: ReactNode,
+) => (
   <ProtectedRoute allow={allow}>
     <AppShell>{element}</AppShell>
   </ProtectedRoute>
@@ -44,56 +48,115 @@ const shell = (allow: Parameters<typeof ProtectedRoute>[0]["allow"], element: JS
 
 const App = () => (
   <ThemeProvider>
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/work-with-us" element={<WorkWithUs />} />
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/work-with-us" element={<WorkWithUs />} />
 
-            {/* Public tracking by code (also used by signed-in recipients) */}
-            <Route path="/track/:code" element={<RecipientTrackResult />} />
+              {/* Public tracking by code (also used by signed-in recipients) */}
+              <Route path="/track/:code" element={<RecipientTrackResult />} />
 
-            {/* Sender */}
-            <Route path="/sender" element={shell(["sender"], <SenderDashboard />)} />
-            <Route path="/sender/packages" element={shell(["sender"], <SenderShipments />)} />
-            <Route path="/sender/packages/new" element={shell(["sender"], <SenderCreatePackage />)} />
-            <Route path="/sender/packages/:id" element={shell(["sender"], <PackageDetail />)} />
+              {/* Sender */}
+              <Route
+                path="/sender"
+                element={shell(["sender"], <SenderDashboard />)}
+              />
+              <Route
+                path="/sender/packages"
+                element={shell(["sender"], <SenderShipments />)}
+              />
+              <Route
+                path="/sender/packages/new"
+                element={shell(["sender"], <SenderCreatePackage />)}
+              />
+              <Route
+                path="/sender/packages/:id"
+                element={shell(["sender"], <PackageDetail />)}
+              />
 
-            {/* Recipient */}
-            <Route path="/recipient" element={shell(["recipient"], <RecipientDashboard />)} />
-            <Route path="/recipient/track" element={shell(["recipient"], <RecipientTrack />)} />
+              {/* Recipient */}
+              <Route
+                path="/recipient"
+                element={shell(["recipient"], <RecipientDashboard />)}
+              />
+              <Route
+                path="/recipient/track"
+                element={shell(["recipient"], <RecipientTrack />)}
+              />
 
-            {/* Admin only */}
-            <Route path="/admin" element={shell(["admin"], <AdminDashboard />)} />
-            <Route path="/admin/users" element={shell(["admin"], <AdminUsers />)} />
-            <Route path="/admin/trips" element={shell(["admin"], <AdminTrips />)} />
-            {/* Back-compat: old /admin/routes URL redirects to /admin/trips */}
-            <Route path="/admin/routes" element={<Navigate to="/admin/trips" replace />} />
-            <Route path="/admin/packages" element={shell(["admin"], <AdminPackages />)} />
-            <Route path="/admin/webhooks" element={shell(["admin"], <AdminWebhooks />)} />
-            <Route path="/admin/applications" element={shell(["admin"], <AdminApplications />)} />
+              {/* Admin only */}
+              <Route
+                path="/admin"
+                element={shell(["admin"], <AdminDashboard />)}
+              />
+              <Route
+                path="/admin/users"
+                element={shell(["admin"], <AdminUsers />)}
+              />
+              <Route
+                path="/admin/trips"
+                element={shell(["admin"], <AdminTrips />)}
+              />
+              {/* Back-compat: old /admin/routes URL redirects to /admin/trips */}
+              <Route
+                path="/admin/routes"
+                element={<Navigate to="/admin/trips" replace />}
+              />
+              <Route
+                path="/admin/packages"
+                element={shell(["admin"], <AdminPackages />)}
+              />
+              <Route
+                path="/admin/webhooks"
+                element={shell(["admin"], <AdminWebhooks />)}
+              />
+              <Route
+                path="/admin/applications"
+                element={shell(["admin"], <AdminApplications />)}
+              />
 
-            {/* Carrier — own namespace, no overlap with /admin */}
-            <Route path="/carrier/packages" element={shell(["carrier"], <CarrierPackages />)} />
-            <Route path="/carrier/trips" element={shell(["carrier"], <CarrierTrips />)} />
-            {/* Back-compat: old /carrier/routes URL redirects to /carrier/trips */}
-            <Route path="/carrier/routes" element={<Navigate to="/carrier/trips" replace />} />
+              {/* Carrier — own namespace, no overlap with /admin */}
+              <Route
+                path="/carrier/packages"
+                element={shell(["carrier"], <CarrierPackages />)}
+              />
+              <Route
+                path="/carrier/trips"
+                element={shell(["carrier"], <CarrierTrips />)}
+              />
+              {/* Back-compat: old /carrier/routes URL redirects to /carrier/trips */}
+              <Route
+                path="/carrier/routes"
+                element={<Navigate to="/carrier/trips" replace />}
+              />
 
-            {/* Notifications — accessible to all authenticated roles */}
-            <Route path="/notifications" element={shell(["sender", "recipient", "carrier", "admin"], <NotificationsPage />)} />
+              {/* Notifications — accessible to all authenticated roles */}
+              <Route
+                path="/notifications"
+                element={shell(
+                  ["sender", "recipient", "carrier", "admin"],
+                  <NotificationsPage />,
+                )}
+              />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   </ThemeProvider>
 );
 
