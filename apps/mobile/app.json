@@ -26,6 +26,10 @@
       "bundler": "metro"
     },
     "plugins": ["expo-router"],
-    "scheme": "packetflow"
+    "scheme": "packetflow",
+    "extra": {
+      "apiUrl": "http://localhost:3001/api/v1"
+    }
   }
 }
+

@@ -8,6 +8,7 @@
   "scripts": {
     "dev:api":    "npm -w @packetflow/backend run dev",
     "dev:web":    "npm -w @packetflow/web run dev",
+    
     "build:api":  "npm -w @packetflow/backend run build",
     "build:web":  "npm -w @packetflow/web run build",
     "test":       "npm -w @packetflow/backend run test"
