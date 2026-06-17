@@ -55,6 +55,14 @@ app.get("/", (_req, res) => {
   res.status(200).json({ success: true, message: "PacketFlow API is running" });
 });
 
+app.get("/debug-cors", (_req, res) => {
+  res.status(200).json({
+    nodeEnv: process.env.NODE_ENV,
+    corsOriginsEnv: process.env.CORS_ORIGINS,
+    allowedOrigins,
+  });
+});
+
 app.use("/api/v1", routes);
 
 app.use(notFound);
