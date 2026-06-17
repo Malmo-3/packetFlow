@@ -4,3 +4,9 @@
 **/dist/
 **/.env
 !**/.env.example
+
+# Local environment files
+.env
+.env.local
+apps/web/.env.local
+apps/backend/.env
