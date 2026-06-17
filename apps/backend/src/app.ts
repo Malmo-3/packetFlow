@@ -14,13 +14,18 @@ const app = express();
 // web build can reach the API without extra config.
 const LOCAL_DEV_ORIGINS = [
   "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:3001",
   "http://localhost:3002",
   "http://localhost:3003",
   "http://localhost:19006",
 ];
 
+const PRODUCTION_ORIGINS = ["https://packetflow-web.vercel.app"];
+
 const allowedOrigins = Array.from(
   new Set([
+    ...PRODUCTION_ORIGINS,
     ...(process.env.CORS_ORIGINS || "")
       .split(",")
       .map((o) => o.trim())
@@ -48,6 +53,14 @@ app.use(validateJson);
 
 app.get("/", (_req, res) => {
   res.status(200).json({ success: true, message: "PacketFlow API is running" });
+});
+
+app.get("/debug-cors", (_req, res) => {
+  res.status(200).json({
+    nodeEnv: process.env.NODE_ENV,
+    corsOriginsEnv: process.env.CORS_ORIGINS,
+    allowedOrigins,
+  });
 });
 
 app.use("/api/v1", routes);
